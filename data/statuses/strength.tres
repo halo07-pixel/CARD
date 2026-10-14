@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="StatusData" format=3]
+
+[ext_resource type="Script" path="res://src/data/status_data.gd" id="1_ewwkc"]
+
+[resource]
+script = ExtResource("1_ewwkc")
+id = &"strength"
+display_name = "Strength"
+description = "Deals +1 damage per stack with attacks."
+icon_id = &"strength"
+stack_mode = 0
+can_be_negative = true
+damage_dealt_add_per_stack = 1.0

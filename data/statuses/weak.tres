@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="StatusData" format=3]
+
+[ext_resource type="Script" path="res://src/data/status_data.gd" id="1_som7e"]
+
+[resource]
+script = ExtResource("1_som7e")
+id = &"weak"
+display_name = "Weak"
+description = "Deals 25% less damage. Decreases each turn."
+icon_id = &"weak"
+is_debuff = true
+decays_at_turn_end = true
+damage_dealt_mult = 0.75

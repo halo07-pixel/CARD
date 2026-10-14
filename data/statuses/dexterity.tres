@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="StatusData" format=3]
+
+[ext_resource type="Script" path="res://src/data/status_data.gd" id="1_c1ybh"]
+
+[resource]
+script = ExtResource("1_c1ybh")
+id = &"dexterity"
+display_name = "Dexterity"
+description = "Gain +1 Block per stack from cards."
+icon_id = &"dexterity"
+stack_mode = 0
+can_be_negative = true
+block_gain_add_per_stack = 1.0

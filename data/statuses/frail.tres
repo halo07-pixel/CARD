@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="StatusData" format=3]
+
+[ext_resource type="Script" path="res://src/data/status_data.gd" id="1_vgovd"]
+
+[resource]
+script = ExtResource("1_vgovd")
+id = &"frail"
+display_name = "Frail"
+description = "Gain 25% less Block from cards. Decreases each turn."
+icon_id = &"frail"
+is_debuff = true
+decays_at_turn_end = true
+block_gain_mult = 0.75

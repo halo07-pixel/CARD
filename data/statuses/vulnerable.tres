@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="StatusData" format=3]
+
+[ext_resource type="Script" path="res://src/data/status_data.gd" id="1_yd0c1"]
+
+[resource]
+script = ExtResource("1_yd0c1")
+id = &"vulnerable"
+display_name = "Vulnerable"
+description = "Takes 50% more damage. Decreases each turn."
+icon_id = &"vulnerable"
+is_debuff = true
+decays_at_turn_end = true
+damage_taken_mult = 1.5
