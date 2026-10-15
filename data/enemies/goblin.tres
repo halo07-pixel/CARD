@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://src/data/enemy_move.gd" id="1_k871p"]
+[ext_resource type="Script" path="res://src/data/effect_data.gd" id="2_powyv"]
+[ext_resource type="Script" path="res://src/data/enemy_data.gd" id="3_tsokr"]
+
+[sub_resource type="Resource" id="Resource_nm75t"]
+script = ExtResource("2_powyv")
+amount = 7
+
+[sub_resource type="Resource" id="Resource_mdrv5"]
+script = ExtResource("1_k871p")
+id = &"stab"
+display_name = "Stab"
+effects = Array[ExtResource("2_powyv")]([SubResource("Resource_nm75t")])
+
+[sub_resource type="Resource" id="Resource_h0avr"]
+script = ExtResource("2_powyv")
+type = 1
+amount = 8
+target = 0
+
+[sub_resource type="Resource" id="Resource_xt3vt"]
+script = ExtResource("1_k871p")
+id = &"guard"
+display_name = "Guard"
+effects = Array[ExtResource("2_powyv")]([SubResource("Resource_h0avr")])
+
+[resource]
+script = ExtResource("3_tsokr")
+id = &"goblin"
+display_name = "Goblin"
+max_hp = 30
+moves = Array[ExtResource("1_k871p")]([SubResource("Resource_mdrv5"), SubResource("Resource_xt3vt")])
+icon_id = &"goblin"

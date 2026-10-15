@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://src/data/enemy_move.gd" id="1_v8ax2"]
+[ext_resource type="Script" path="res://src/data/effect_data.gd" id="2_qxlkg"]
+[ext_resource type="Script" path="res://src/data/enemy_data.gd" id="3_yady4"]
+
+[sub_resource type="Resource" id="Resource_yeqnf"]
+script = ExtResource("2_qxlkg")
+type = 4
+amount = 2
+status_id = &"strength"
+target = 0
+
+[sub_resource type="Resource" id="Resource_qct1u"]
+script = ExtResource("1_v8ax2")
+id = &"ritual"
+display_name = "Ritual"
+effects = Array[ExtResource("2_qxlkg")]([SubResource("Resource_yeqnf")])
+
+[sub_resource type="Resource" id="Resource_sgjir"]
+script = ExtResource("2_qxlkg")
+amount = 6
+
+[sub_resource type="Resource" id="Resource_6ad3m"]
+script = ExtResource("1_v8ax2")
+id = &"slash"
+display_name = "Slash"
+effects = Array[ExtResource("2_qxlkg")]([SubResource("Resource_sgjir")])
+
+[resource]
+script = ExtResource("3_yady4")
+id = &"acolyte"
+display_name = "Acolyte"
+max_hp = 38
+moves = Array[ExtResource("1_v8ax2")]([SubResource("Resource_qct1u"), SubResource("Resource_6ad3m")])
+sequence = Array[StringName]([&"ritual", &"slash", &"slash"])
+icon_id = &"acolyte"

@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="EnemyData" format=3]
+
+[ext_resource type="Script" path="res://src/data/enemy_move.gd" id="1_s20qs"]
+[ext_resource type="Script" path="res://src/data/effect_data.gd" id="2_n28aa"]
+[ext_resource type="Script" path="res://src/data/enemy_data.gd" id="3_nl3q0"]
+
+[sub_resource type="Resource" id="Resource_r0o31"]
+script = ExtResource("2_n28aa")
+amount = 6
+
+[sub_resource type="Resource" id="Resource_ekkkr"]
+script = ExtResource("1_s20qs")
+id = &"tackle"
+display_name = "Tackle"
+effects = Array[ExtResource("2_n28aa")]([SubResource("Resource_r0o31")])
+weight = 6
+max_consecutive = 2
+
+[sub_resource type="Resource" id="Resource_pmp7f"]
+script = ExtResource("2_n28aa")
+amount = 3
+
+[sub_resource type="Resource" id="Resource_mc08e"]
+script = ExtResource("2_n28aa")
+type = 4
+amount = 1
+status_id = &"weak"
+
+[sub_resource type="Resource" id="Resource_n6ilt"]
+script = ExtResource("1_s20qs")
+id = &"smear"
+display_name = "Smear"
+effects = Array[ExtResource("2_n28aa")]([SubResource("Resource_pmp7f"), SubResource("Resource_mc08e")])
+weight = 4
+max_consecutive = 1
+
+[resource]
+script = ExtResource("3_nl3q0")
+id = &"slime"
+display_name = "Slime"
+max_hp = 22
+moves = Array[ExtResource("1_s20qs")]([SubResource("Resource_ekkkr"), SubResource("Resource_n6ilt")])
+pattern = 1
+icon_id = &"slime"
