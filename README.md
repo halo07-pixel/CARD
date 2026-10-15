@@ -17,7 +17,7 @@ Runner quét `tests/test_*.gd`, thoát mã `1` nếu có test lỗi. Trên máy 
 | Thư mục | Nội dung |
 |---|---|
 | `src/data/` | Resource dữ liệu thuần: `CardData`, `EffectData`, `StatusData`, `EnemyData`, `EnemyMove` (không chứa logic, không giữ hình) |
-| `src/core/` | Lõi chiến đấu, không dùng node/UI: `Deck`, `Combatant`, `EffectResolver`, `DamageCalculator`, `EnemyAI`, `EnemyUnit`, `ResourceRegistry`... |
+| `src/core/` | Lõi chiến đấu, không dùng node/UI: `Deck`, `Combatant`, `EffectResolver`, `DamageCalculator`, `EnemyAI`, `EnemyUnit`, `BattleController`, `BattleState`, `ResourceRegistry`... |
 | `src/autoload/` | `EventBus`, `RunState`, `SaveSystem`, `AudioManager`, `SceneRouter` |
 | `data/` | File `.tres` của thẻ, quái, trạng thái (thêm nội dung = thêm file) |
 | `tests/` | Test headless |
@@ -37,7 +37,7 @@ Runner quét `tests/test_*.gd`, thoát mã `1` nếu có test lỗi. Trên máy 
 - [x] **Giai đoạn 1.1** - Thẻ và bộ bài: `CardData`, `EffectData`, `CardInstance`, `Deck`
 - [x] **Giai đoạn 1.2** - Trạng thái, `Combatant`, công thức sát thương, `EffectResolver`
 - [x] **Giai đoạn 1.3a** - Dữ liệu quái, AI chọn chiêu, ý định (intent), `ResourceRegistry`, 3 quái mẫu
-- [ ] **Giai đoạn 1.3b** - `BattleState`, `BattleController`, vùng "limbo" của `Deck`
+- [x] **Giai đoạn 1.3b** - `BattleState`, `BattleController` (lượt chơi, thắng/thua, tái lập theo seed), vùng "limbo" của `Deck`
 - [ ] **Giai đoạn 1.3c** - Thẻ/nhân vật mẫu (`CharacterData`, `CardRegistry`), bot tự chơi hàng nghìn trận
 - [ ] **Giai đoạn 2** - Hook/trigger, relic, potion, từ khóa nâng cao (X-cost, nâng cấp)
 - [ ] **Giai đoạn 3** - UI chiến đấu (tay bài, kéo thả, ý định quái)
@@ -47,4 +47,4 @@ Runner quét `tests/test_*.gd`, thoát mã `1` nếu có test lỗi. Trên máy 
 - [ ] **Giai đoạn 7** - Asset CC0, âm thanh, hiệu ứng
 - [ ] **Giai đoạn 8** - Cân bằng bằng bot, đóng gói
 
-Số test hiện tại: 170 (đều đạt).
+Số test hiện tại: 218 (đều đạt).

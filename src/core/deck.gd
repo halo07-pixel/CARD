@@ -1,6 +1,8 @@
 class_name Deck
 extends RefCounted
-## Bốn pile: draw / hand / discard / exhaust. Không dùng node; UI chỉ lắng nghe Signal.
+## Năm vùng: draw / hand / discard / exhaust / limbo. Không dùng node; UI chỉ lắng nghe Signal.
+## "limbo" giữ thẻ ĐANG được chơi (đã rời tay, chưa vào discard/exhaust) để hiệu ứng của chính
+## nó (rút bài làm xáo lại discard...) không thể rút lại đúng thẻ đó trong cùng lượt.
 ## "Đỉnh" draw pile là phần tử CUỐI mảng. RNG được tiêm từ ngoài để kết quả tái lập được.
 
 signal card_drawn(card: CardInstance)
@@ -14,12 +16,14 @@ const DRAW := &"draw"
 const HAND := &"hand"
 const DISCARD := &"discard"
 const EXHAUST := &"exhaust"
-const PILES: Array[StringName] = [DRAW, HAND, DISCARD, EXHAUST]
+const LIMBO := &"limbo"
+const PILES: Array[StringName] = [DRAW, HAND, DISCARD, EXHAUST, LIMBO]
 
 var _draw_pile: Array[CardInstance] = []
 var _hand: Array[CardInstance] = []
 var _discard_pile: Array[CardInstance] = []
 var _exhaust_pile: Array[CardInstance] = []
+var _limbo: Array[CardInstance] = []
 var _rng: RandomNumberGenerator
 var _battle_started: bool = false
 
@@ -43,7 +47,8 @@ func is_battle_started() -> bool:
 
 ## Xáo draw pile và đưa thẻ innate lên đỉnh. Chỉ gọi được một lần, khi mọi thẻ còn trong draw pile.
 func start_battle() -> bool:
-	if _battle_started or not (_hand.is_empty() and _discard_pile.is_empty() and _exhaust_pile.is_empty()):
+	if _battle_started or not (_hand.is_empty() and _discard_pile.is_empty()
+			and _exhaust_pile.is_empty() and _limbo.is_empty()):
 		push_warning("Deck.start_battle: trận đã bắt đầu")
 		return false
 	_battle_started = true
@@ -84,11 +89,39 @@ func draw(count: int) -> Array[CardInstance]:
 	return drawn
 
 
-## Thẻ phải đang ở tay. Thẻ exhaust vào exhaust pile, còn lại vào discard.
+## Chơi trọn vẹn một thẻ không có hiệu ứng xen giữa: tay -> limbo -> discard/exhaust.
 func play_card(card: CardInstance) -> bool:
-	if card == null:
+	return begin_play(card) and finish_play(card)
+
+
+## Bước 1 khi chơi thẻ: thẻ phải đang ở tay, được chuyển sang limbo.
+func begin_play(card: CardInstance) -> bool:
+	var index := _hand.find(card) if card != null else -1
+	if index == -1:
+		push_warning("Deck.begin_play: thẻ không ở trong tay, từ chối thao tác")
 		return false
-	return _move_from_hand(card, EXHAUST if card.data.exhaust else DISCARD)
+	_hand.remove_at(index)
+	_limbo.append(card)
+	_emit_changed(HAND, LIMBO)
+	return true
+
+
+## Bước 2: thẻ phải đang ở limbo; thẻ exhaust vào exhaust pile, còn lại vào discard.
+func finish_play(card: CardInstance) -> bool:
+	var index := _limbo.find(card) if card != null else -1
+	if index == -1:
+		push_warning("Deck.finish_play: thẻ không ở limbo, từ chối thao tác")
+		return false
+	_limbo.remove_at(index)
+	var destination := EXHAUST if card.data.exhaust else DISCARD
+	if destination == EXHAUST:
+		_exhaust_pile.append(card)
+		card_exhausted.emit(card)
+	else:
+		_discard_pile.append(card)
+		card_discarded.emit(card)
+	_emit_changed(LIMBO, destination)
+	return true
 
 
 func discard_card(card: CardInstance) -> bool:
@@ -159,7 +192,7 @@ func count(pile_name: StringName) -> int:
 
 
 func total_count() -> int:
-	return _draw_pile.size() + _hand.size() + _discard_pile.size() + _exhaust_pile.size()
+	return _draw_pile.size() + _hand.size() + _discard_pile.size() + _exhaust_pile.size() + _limbo.size()
 
 
 ## Tên pile chứa thẻ, hoặc &"" nếu thẻ không thuộc deck.
@@ -182,6 +215,8 @@ func _pile(pile_name: StringName) -> Array[CardInstance]:
 			return _discard_pile
 		EXHAUST:
 			return _exhaust_pile
+		LIMBO:
+			return _limbo
 		_:
 			return _draw_pile
 

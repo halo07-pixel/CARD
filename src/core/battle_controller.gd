@@ -1,0 +1,314 @@
+class_name BattleController
+extends ResolverContext
+## Điều phối một trận đấu: lượt người chơi, lượt quái, thắng/thua. Đây là NƠI DUY NHẤT UI gọi xuống
+## (play_card, end_player_turn); mọi thay đổi được báo lên bằng Signal ("call down, signal up").
+## Mọi hành động đều kiểm tra state trước; bị từ chối thì KHÔNG thay đổi gì và phát action_rejected.
+## Đồng thời đóng vai ResolverContext cho EffectResolver (rút bài, năng lượng, tra status, RNG).
+
+signal energy_changed(old_energy: int, new_energy: int)
+signal turn_started(turn_number: int, is_player: bool)
+signal intent_changed(unit: EnemyUnit)
+signal card_played(card: CardInstance, target: EnemyUnit, results: Array[EffectResult])
+signal enemy_acted(unit: EnemyUnit, move: EnemyMove, results: Array[EffectResult])
+signal enemy_defeated(unit: EnemyUnit)
+signal action_rejected(reason: StringName)
+signal battle_ended(victory: bool)
+
+const REASON_ALREADY_STARTED := &"already_started"
+const REASON_BATTLE_OVER := &"battle_over"
+const REASON_NOT_PLAYER_TURN := &"not_player_turn"
+const REASON_CARD_NOT_IN_HAND := &"card_not_in_hand"
+const REASON_UNPLAYABLE := &"unplayable"
+const REASON_NOT_ENOUGH_ENERGY := &"not_enough_energy"
+const REASON_INVALID_TARGET := &"invalid_target"
+const END_VICTORY := &"victory"
+const END_DEFEAT := &"defeat"
+const END_TURN_CAP := &"turn_cap"
+
+var player: Combatant = null
+var deck: Deck = null
+var enemies: Array[EnemyUnit] = []
+var state := BattleState.new()
+var config: BattleConfig = null
+var energy: int = 0
+var turn: int = 0
+var end_reason: StringName = &""
+
+var _status_registry: StatusRegistry = null
+var _rng: RandomNumberGenerator = null
+var _reported_dead: Dictionary = {}
+
+
+## Tạo trận từ các EnemyUnit dựng sẵn. Trả null nếu tham số không hợp lệ.
+## Cùng seed + cùng chuỗi hành động => cùng kết quả (RNG xáo bài và RNG trận đấu tách riêng).
+static func create(p_player: Combatant, cards: Array[CardInstance], units: Array[EnemyUnit],
+		registry: StatusRegistry, seed_value: int = 1, p_config: BattleConfig = null,
+		battle_rng: RandomNumberGenerator = null) -> BattleController:
+	var cfg := p_config if p_config != null else BattleConfig.new()
+	var problems := _setup_problems(p_player, cards, units, registry, cfg)
+	if not problems.is_empty():
+		push_error("BattleController.create: %s" % [problems])
+		return null
+	var controller := BattleController.new()
+	controller.player = p_player
+	controller.config = cfg
+	controller.enemies = units.duplicate()
+	controller._status_registry = registry
+	controller._rng = battle_rng if battle_rng != null else _derived_rng(seed_value)
+	var deck_rng := RandomNumberGenerator.new()
+	deck_rng.seed = seed_value
+	controller.deck = Deck.new(cards, deck_rng)
+	for unit in controller.enemies:
+		unit.combatant.died.connect(controller._on_enemy_died)  # không bind: tránh vòng tham chiếu
+	return controller
+
+
+## Tiện ích: dựng EnemyUnit từ EnemyData (id dạng "slime_0", "slime_1"...) dùng chung RNG của trận.
+static func create_from_data(p_player: Combatant, cards: Array[CardInstance], datas: Array[EnemyData],
+		registry: StatusRegistry, seed_value: int = 1, p_config: BattleConfig = null) -> BattleController:
+	var rng := _derived_rng(seed_value)
+	var units: Array[EnemyUnit] = []
+	for i in datas.size():
+		if datas[i] == null:
+			push_error("BattleController.create_from_data: EnemyData null")
+			return null
+		var unit := EnemyUnit.create(datas[i], rng, StringName("%s_%d" % [datas[i].id, i]))
+		if unit == null:
+			return null
+		units.append(unit)
+	return create(p_player, cards, units, registry, seed_value, p_config, rng)
+
+
+func start_battle() -> bool:
+	if state.phase != BattleState.Phase.SETUP:
+		return _reject(REASON_ALREADY_STARTED)
+	deck.start_battle()
+	for unit in enemies:
+		unit.plan_next_move(player)
+		intent_changed.emit(unit)
+	_begin_player_turn()
+	return true
+
+
+## target chỉ cần với thẻ nhắm một quái (SINGLE_ENEMY); thẻ khác bỏ qua tham số này.
+func play_card(card: CardInstance, target: EnemyUnit = null) -> bool:
+	var reason := _play_blocker(card)
+	if reason == &"" and not _target_is_valid(card, target):
+		reason = REASON_INVALID_TARGET
+	if reason != &"":
+		return _reject(reason)
+	_set_energy(energy - (energy if card.data.is_x_cost else card.get_cost()))
+	deck.begin_play(card)
+	var results := _resolve_card_effects(card, target)
+	deck.finish_play(card)
+	_refresh_intents()
+	card_played.emit(card, target, results)
+	_check_end()
+	return true
+
+
+func end_player_turn() -> bool:
+	if state.is_terminal():
+		return _reject(REASON_BATTLE_OVER)
+	if not state.is_player_turn():
+		return _reject(REASON_NOT_PLAYER_TURN)
+	deck.end_turn_discard()
+	player.end_turn()
+	state.transition(BattleState.Phase.ENEMY_TURN)
+	_run_enemy_turn()
+	return true
+
+
+func can_play(card: CardInstance) -> bool:
+	return _play_blocker(card) == &""
+
+
+## Quái sống có thể chọn làm mục tiêu cho thẻ (rỗng nếu thẻ không nhắm một quái).
+func valid_targets(card: CardInstance) -> Array[EnemyUnit]:
+	var targets: Array[EnemyUnit] = []
+	if card != null and card.data.target_mode == CardData.TargetMode.SINGLE_ENEMY:
+		targets.assign(living_enemies())
+	return targets
+
+
+func living_enemies() -> Array[EnemyUnit]:
+	var living: Array[EnemyUnit] = []
+	for unit in enemies:
+		if unit.is_alive():
+			living.append(unit)
+	return living
+
+
+## --- ResolverContext ---
+
+func draw_cards(count: int) -> int:
+	return deck.draw(count).size()
+
+
+func gain_energy(amount: int) -> void:
+	_set_energy(energy + amount)
+
+
+func get_status_data(status_id: StringName) -> StatusData:
+	return _status_registry.get_status(status_id)
+
+
+func get_rng() -> RandomNumberGenerator:
+	return _rng
+
+
+## --- Nội bộ ---
+
+static func _derived_rng(seed_value: int) -> RandomNumberGenerator:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value ^ 0x5DEECE66D
+	return rng
+
+
+static func _setup_problems(p_player: Combatant, cards: Array[CardInstance], units: Array[EnemyUnit],
+		registry: StatusRegistry, cfg: BattleConfig) -> Array[String]:
+	var problems: Array[String] = []
+	if p_player == null or not p_player.is_alive():
+		problems.append("người chơi null hoặc đã chết")
+	if cards.is_empty():
+		problems.append("bộ bài rỗng")
+	if units.is_empty():
+		problems.append("không có quái")
+	for unit in units:
+		if unit == null:
+			problems.append("có EnemyUnit null")
+			break
+	if registry == null:
+		problems.append("thiếu StatusRegistry")
+	problems.append_array(cfg.validate())
+	return problems
+
+
+func _begin_player_turn() -> void:
+	turn += 1
+	state.transition(BattleState.Phase.PLAYER_START)
+	player.start_turn()
+	_set_energy(config.max_energy)
+	turn_started.emit(turn, true)
+	deck.draw(config.draw_per_turn)
+	state.transition(BattleState.Phase.PLAYER_TURN)
+
+
+## Lý do không chơi được thẻ (&"" nếu chơi được), chưa xét mục tiêu.
+func _play_blocker(card: CardInstance) -> StringName:
+	if state.is_terminal():
+		return REASON_BATTLE_OVER
+	if not state.is_player_turn():
+		return REASON_NOT_PLAYER_TURN
+	if card == null or deck.find_pile(card) != Deck.HAND:
+		return REASON_CARD_NOT_IN_HAND
+	if card.data.unplayable:
+		return REASON_UNPLAYABLE
+	if not card.is_playable(energy):
+		return REASON_NOT_ENOUGH_ENERGY
+	return &""
+
+
+func _target_is_valid(card: CardInstance, target: EnemyUnit) -> bool:
+	if card.data.target_mode != CardData.TargetMode.SINGLE_ENEMY:
+		return true
+	return target != null and target.is_alive() and enemies.has(target)
+
+
+func _resolve_card_effects(card: CardInstance, target: EnemyUnit) -> Array[EffectResult]:
+	var results: Array[EffectResult] = []
+	var opponents := _enemy_combatants()
+	var chosen: Combatant = target.combatant if target != null else null
+	for effect in card.data.effects:
+		if effect.target == EffectData.Target.TARGET_ENEMY and (chosen == null or not chosen.is_alive()):
+			continue  # mục tiêu đã chết giữa chừng (vd. effect đầu tiên đã hạ nó)
+		results.append_array(EffectResolver.resolve(effect, player, chosen, opponents, self))
+	return results
+
+
+func _run_enemy_turn() -> void:
+	turn_started.emit(turn, false)
+	var opponents: Array[Combatant] = [player]
+	for unit in enemies:
+		if state.is_terminal():
+			return
+		if not unit.is_alive():
+			continue
+		unit.combatant.start_turn()
+		var results: Array[EffectResult] = []
+		for effect in unit.current_move.effects:
+			if not player.is_alive():
+				break
+			results.append_array(EffectResolver.resolve(effect, unit.combatant, player, opponents, self))
+		enemy_acted.emit(unit, unit.current_move, results)
+		unit.combatant.end_turn()
+		if _check_end():
+			return
+		unit.plan_next_move(player)
+		intent_changed.emit(unit)
+	state.transition(BattleState.Phase.CHECK_END)
+	if _check_end():
+		return
+	if config.turn_cap > 0 and turn >= config.turn_cap:
+		_finish(false, END_TURN_CAP)
+		return
+	_refresh_intents()
+	_begin_player_turn()
+
+
+## Người chơi chết được xét TRƯỚC (thua ưu tiên hơn thắng nếu xảy ra cùng lúc).
+func _check_end() -> bool:
+	if state.is_terminal():
+		return true
+	if not player.is_alive():
+		_finish(false, END_DEFEAT)
+		return true
+	if living_enemies().is_empty():
+		_finish(true, END_VICTORY)
+		return true
+	return false
+
+
+func _finish(victory: bool, reason: StringName) -> void:
+	end_reason = reason
+	state.transition(BattleState.Phase.VICTORY if victory else BattleState.Phase.DEFEAT)
+	battle_ended.emit(victory)
+
+
+func _enemy_combatants() -> Array[Combatant]:
+	var combatants: Array[Combatant] = []
+	for unit in enemies:
+		combatants.append(unit.combatant)
+	return combatants
+
+
+## Dựng lại ý định (Strength/Weak/Vulnerable đổi làm con số đổi) và chỉ báo khi thật sự khác.
+func _refresh_intents() -> void:
+	for unit in enemies:
+		if not unit.is_alive() or unit.current_move == null:
+			continue
+		var before := unit.intent
+		var after := unit.refresh_intent(player)
+		if before == null or after.damage_per_hit != before.damage_per_hit \
+				or after.hit_count != before.hit_count or after.total_damage != before.total_damage:
+			intent_changed.emit(unit)
+
+
+func _set_energy(new_energy: int) -> void:
+	var old := energy
+	energy = maxi(new_energy, 0)
+	if energy != old:
+		energy_changed.emit(old, energy)
+
+
+## Combatant.died không bind được unit (vòng tham chiếu) -> quét tìm quái chết chưa báo.
+func _on_enemy_died() -> void:
+	for unit in enemies:
+		if not unit.is_alive() and not _reported_dead.has(unit):
+			_reported_dead[unit] = true
+			enemy_defeated.emit(unit)
+
+
+func _reject(reason: StringName) -> bool:
+	action_rejected.emit(reason)
+	return false
