@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://src/data/effect_data.gd" id="1_aqg2l"]
+[ext_resource type="Script" path="res://src/data/card_data.gd" id="2_ebrg0"]
+
+[sub_resource type="Resource" id="Resource_8175y"]
+script = ExtResource("1_aqg2l")
+type = 1
+amount = 5
+target = 0
+
+[sub_resource type="Resource" id="Resource_hm4hg"]
+script = ExtResource("1_aqg2l")
+amount = 5
+
+[resource]
+script = ExtResource("2_ebrg0")
+id = &"iron_wave"
+display_name = "Iron Wave"
+description = "Gain {block} Block. Deal {damage} damage."
+character_id = &"warrior"
+effects = Array[ExtResource("1_aqg2l")]([SubResource("Resource_8175y"), SubResource("Resource_hm4hg")])
+icon_id = &"iron_wave"

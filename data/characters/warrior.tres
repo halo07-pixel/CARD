@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="CharacterData" format=3]
+
+[ext_resource type="Script" path="res://src/data/character_data.gd" id="1_qex7c"]
+
+[resource]
+script = ExtResource("1_qex7c")
+id = &"warrior"
+display_name = "Warrior"
+starting_deck = Array[StringName]([&"strike", &"strike", &"strike", &"strike", &"strike", &"defend", &"defend", &"defend", &"defend", &"bash"])
+icon_id = &"warrior"

@@ -41,6 +41,8 @@ static func resolve(effect: EffectData, source: Combatant, chosen_target: Combat
 static func _resolve_damage(effect: EffectData, source: Combatant, chosen: Combatant,
 		opponents: Array[Combatant], context: ResolverContext, results: Array[EffectResult]) -> void:
 	for hit in effect.hits:
+		if hit > 0 and effect.target == G.TARGET_ENEMY and (chosen == null or not chosen.is_alive()):
+			return  # mục tiêu đơn đã chết ở hit trước: dừng im lặng (không phải lỗi gọi sai)
 		var targets := _pick_targets(effect, source, chosen, opponents, context)
 		if targets.is_empty():
 			return  # hết mục tiêu sống: dừng các hit còn lại

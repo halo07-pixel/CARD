@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="CardData" format=3]
+
+[ext_resource type="Script" path="res://src/data/effect_data.gd" id="1_dppes"]
+[ext_resource type="Script" path="res://src/data/card_data.gd" id="2_rlp1h"]
+
+[sub_resource type="Resource" id="Resource_xk6m2"]
+script = ExtResource("1_dppes")
+amount = 4
+target = 2
+
+[sub_resource type="Resource" id="Resource_t373u"]
+script = ExtResource("1_dppes")
+type = 4
+amount = 1
+status_id = &"vulnerable"
+target = 2
+
+[resource]
+script = ExtResource("2_rlp1h")
+id = &"thunderclap"
+display_name = "Thunderclap"
+description = "Deal {damage} damage and apply {vulnerable} Vulnerable to ALL enemies."
+character_id = &"warrior"
+target_mode = 1
+effects = Array[ExtResource("1_dppes")]([SubResource("Resource_xk6m2"), SubResource("Resource_t373u")])
+icon_id = &"thunderclap"
