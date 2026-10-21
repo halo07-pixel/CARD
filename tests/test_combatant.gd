@@ -203,3 +203,65 @@ func test_get_status_ids_returns_copy() -> void:
 	var ids := c.get_status_ids()
 	ids.clear()
 	assert_true(c.has_status(&"weak"))
+
+
+func test_barricade_keeps_block_at_the_start_of_the_turn() -> void:
+	var c := Factory.combatant()
+	var barricade := Factory.status(&"barricade", Factory.S.INTENSITY, {"retains_block": true})
+	c.add_status(barricade, 1)
+	c.gain_block(8)
+	c.start_turn()
+	assert_eq(c.block, 8)
+	c.remove_status(&"barricade")
+	c.start_turn()
+	assert_eq(c.block, 0, "hết Barricade thì giáp lại bị xóa đầu lượt")
+
+
+func _artifact() -> StatusData:
+	return Factory.status(&"artifact", Factory.S.INTENSITY, {"negates_debuff": true})
+
+
+func test_artifact_negates_debuffs_one_stack_at_a_time() -> void:
+	var c := Factory.combatant()
+	c.add_status(_artifact(), 2)
+	assert_false(c.add_status(Factory.weak(), 2), "debuff đầu tiên bị chặn")
+	assert_false(c.has_status(&"weak"))
+	assert_eq(c.get_status(&"artifact"), 1)
+	assert_false(c.add_status(Factory.vulnerable(), 1), "debuff thứ hai bị chặn")
+	assert_false(c.has_status(&"artifact"), "hết stack thì status bị gỡ")
+	assert_true(c.add_status(Factory.weak(), 1), "debuff thứ ba lọt qua")
+
+
+func test_artifact_does_not_touch_buffs_or_debuff_removal() -> void:
+	var c := Factory.combatant()
+	c.add_status(Factory.weak(), 2)
+	c.add_status(_artifact(), 1)
+	assert_true(c.add_status(Factory.strength(), 2), "buff không bị chặn")
+	assert_true(c.add_status(Factory.weak(), -1), "giảm debuff không bị chặn")
+	assert_eq(c.get_status(&"weak"), 1)
+	assert_eq(c.get_status(&"artifact"), 1, "không tốn stack Artifact")
+
+
+func test_decay_after_turn_start_only_touches_flagged_statuses() -> void:
+	var c := Factory.combatant()
+	var poison := Factory.status(&"poison", Factory.S.DURATION, {"decay_after_turn_start": true, "is_debuff": true})
+	c.add_status(poison, 2)
+	c.add_status(Factory.weak(), 2)
+	assert_true(c.decay_after_turn_start())
+	assert_eq(c.get_status(&"poison"), 1)
+	assert_eq(c.get_status(&"weak"), 2)
+	c.decay_after_turn_start()
+	assert_false(c.has_status(&"poison"))
+
+
+func test_dead_combatant_does_not_decay_after_turn_start() -> void:
+	var c := Factory.combatant()
+	c.take_damage(999)
+	assert_false(c.decay_after_turn_start())
+
+
+func test_get_status_data_returns_the_data_or_null() -> void:
+	var c := Factory.combatant()
+	assert_true(c.get_status_data(&"weak") == null)
+	c.add_status(Factory.weak(), 1)
+	assert_eq(c.get_status_data(&"weak").id, &"weak")

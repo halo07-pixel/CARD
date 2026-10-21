@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="StatusData" format=3]
+
+[ext_resource type="Script" path="res://src/data/status_data.gd" id="1_dgogm"]
+[ext_resource type="Script" path="res://src/data/trigger_data.gd" id="2_wiobb"]
+[ext_resource type="Script" path="res://src/data/effect_data.gd" id="3_6ja24"]
+
+[sub_resource type="Resource" id="Resource_mu6a8"]
+script = ExtResource("3_6ja24")
+amount = 1
+target = 4
+
+[sub_resource type="Resource" id="Resource_51dc3"]
+script = ExtResource("2_wiobb")
+event = 5
+effects = Array[ExtResource("3_6ja24")]([SubResource("Resource_mu6a8")])
+scale_by_stacks = true
+
+[resource]
+script = ExtResource("1_dgogm")
+id = &"thorns"
+display_name = "Thorns"
+description = "Whenever you are attacked, deal 1 damage to the attacker per stack."
+icon_id = &"thorns"
+stack_mode = 0
+triggers = Array[ExtResource("2_wiobb")]([SubResource("Resource_51dc3")])

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="StatusData" format=3]
+
+[ext_resource type="Script" path="res://src/data/status_data.gd" id="1_eeixc"]
+[ext_resource type="Script" path="res://src/data/trigger_data.gd" id="2_ws045"]
+
+[resource]
+script = ExtResource("1_eeixc")
+id = &"artifact"
+display_name = "Artifact"
+description = "Negates the next debuff per stack."
+icon_id = &"artifact"
+stack_mode = 0
+negates_debuff = true

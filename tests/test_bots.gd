@@ -135,3 +135,13 @@ func test_greedy_targets_the_vulnerable_enemy_for_more_damage() -> void:
 	GreedyBot.new().act(controller)
 	assert_eq(controller.enemies[1].combatant.hp, 51, "6 x 1.5 = 9 lên con đang Vulnerable")
 	assert_eq(controller.enemies[0].combatant.hp, 60)
+
+
+func test_greedy_never_plays_a_card_that_would_kill_the_player() -> void:
+	var cards := CardRegistry.load_from_dir("res://data/cards").create_instances([&"bloodletting"] as Array[StringName])
+	var controller := _started(cards, _dummy(&"dummy", 100, 1), null, 1, 3)
+	var rec := Recorder.new(controller)
+	GreedyBot.new().act(controller)
+	assert_eq(rec.count("played:"), 0, "ở 3 máu, Bloodletting là tự sát")
+	assert_true(controller.player.is_alive())
+	assert_eq(controller.turn, 2, "thay vào đó bot kết thúc lượt")

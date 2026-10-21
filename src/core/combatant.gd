@@ -83,11 +83,22 @@ func gain_block(amount: int) -> int:
 	return amount
 
 
-## Đầu lượt của chính combatant này: giáp về 0.
+## Đầu lượt của chính combatant này: giáp về 0 (trừ khi có status retains_block như Barricade).
 func start_turn() -> bool:
 	if not is_alive():
 		return false
-	_set_block(0)
+	if not _retains_block():
+		_set_block(0)
+	return true
+
+
+## Sau khi trigger đầu lượt đã nổ: status decay_after_turn_start (Poison) giảm 1.
+func decay_after_turn_start() -> bool:
+	if not is_alive():
+		return false
+	for status_id: StringName in _amounts.keys():
+		if (_status_data[status_id] as StatusData).decay_after_turn_start:
+			_set_status(status_id, _amounts[status_id] - 1)
 	return true
 
 
@@ -105,6 +116,8 @@ func end_turn() -> bool:
 func add_status(data: StatusData, amount: int) -> bool:
 	if data == null or amount == 0 or not is_alive():
 		return false
+	if amount > 0 and data.is_debuff and _consume_negation():
+		return false  # bị Artifact chặn: tiêu 1 stack, debuff không được gắn
 	var old: int = _amounts.get(data.id, 0)
 	var target := clampi(old + amount, -MAX_STATUS_AMOUNT, MAX_STATUS_AMOUNT)
 	if target < 0 and not data.can_be_negative:
@@ -121,6 +134,10 @@ func remove_status(status_id: StringName) -> bool:
 		return false
 	_set_status(status_id, 0)
 	return true
+
+
+func get_status_data(status_id: StringName) -> StatusData:
+	return _status_data.get(status_id) as StatusData
 
 
 func get_status(status_id: StringName) -> int:
@@ -157,6 +174,22 @@ func damage_taken_mult() -> float:
 
 func block_gain_mult() -> float:
 	return _product(&"block_gain_mult")
+
+
+func _retains_block() -> bool:
+	for status_id: StringName in _amounts:
+		if (_status_data[status_id] as StatusData).retains_block:
+			return true
+	return false
+
+
+## Tiêu 1 stack của status negates_debuff (nếu có). Trả true nếu đã chặn được một debuff.
+func _consume_negation() -> bool:
+	for status_id: StringName in _amounts.keys():
+		if (_status_data[status_id] as StatusData).negates_debuff:
+			_set_status(status_id, _amounts[status_id] - 1)
+			return true
+	return false
 
 
 func _sum_per_stack(property: StringName) -> float:

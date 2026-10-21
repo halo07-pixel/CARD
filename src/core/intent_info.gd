@@ -29,6 +29,8 @@ static func build(p_move: EnemyMove, source: Combatant, target: Combatant) -> In
 				info.total_damage += per_hit * effect.hits
 			EffectData.Type.BLOCK:
 				info.defends = true
+			EffectData.Type.HEAL:
+				info.buffs = true
 			EffectData.Type.APPLY_STATUS:
 				if effect.target == EffectData.Target.SELF:
 					info.buffs = true

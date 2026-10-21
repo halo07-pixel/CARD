@@ -1,9 +1,11 @@
 class_name EffectData
 extends Resource
-## Dữ liệu thuần của MỘT hiệu ứng thẻ. Không chứa logic thực thi (việc đó của EffectResolver).
+## Dữ liệu thuần của MỘT hiệu ứng. Không chứa logic thực thi (việc đó của EffectResolver).
+## LƯU Ý: file .tres lưu enum dạng số nguyên -> giá trị enum mới luôn thêm vào CUỐI.
 
-enum Type { DAMAGE, BLOCK, DRAW, GAIN_ENERGY, APPLY_STATUS }
-enum Target { SELF, TARGET_ENEMY, ALL_ENEMIES, RANDOM_ENEMY }
+enum Type { DAMAGE, BLOCK, DRAW, GAIN_ENERGY, APPLY_STATUS, HEAL, LOSE_HP }
+## EVENT_SOURCE = kẻ gây ra sự kiện (vd. kẻ vừa đánh bạn) - chỉ dùng trong trigger.
+enum Target { SELF, TARGET_ENEMY, ALL_ENEMIES, RANDOM_ENEMY, EVENT_SOURCE }
 
 @export var type: Type = Type.DAMAGE
 @export var amount: int = 0
@@ -23,8 +25,14 @@ static func create(p_type: Type, p_amount: int, p_target: Target,
 	return effect
 
 
-## Trả về danh sách lỗi (rỗng = hợp lệ).
-func validate() -> Array[String]:
+## Bản sao với amount nhân lên (trigger scale_by_stacks); không sửa effect gốc dùng chung.
+func scaled(multiplier: int) -> EffectData:
+	return EffectData.create(type, amount * multiplier, target, hits, status_id)
+
+
+## Trả về danh sách lỗi (rỗng = hợp lệ). EVENT_SOURCE chỉ hợp lệ khi allow_event_source
+## (dữ liệu trigger); thẻ và chiêu quái luôn gọi với mặc định false.
+func validate(allow_event_source: bool = false) -> Array[String]:
 	var errors: Array[String] = []
 	var type_name: String = Type.keys()[type]
 	if amount <= 0:
@@ -37,11 +45,13 @@ func validate() -> Array[String]:
 		errors.append("APPLY_STATUS: thiếu status_id")
 	if type != Type.APPLY_STATUS and not status_id.is_empty():
 		errors.append("%s: status_id chỉ dùng cho APPLY_STATUS" % type_name)
+	if target == Target.EVENT_SOURCE and not allow_event_source:
+		errors.append("%s: EVENT_SOURCE chỉ dùng trong trigger" % type_name)
 	match type:
 		Type.DAMAGE:
 			if target == Target.SELF:
 				errors.append("DAMAGE: không được nhắm SELF")
-		Type.BLOCK, Type.DRAW, Type.GAIN_ENERGY:
+		Type.BLOCK, Type.DRAW, Type.GAIN_ENERGY, Type.HEAL:
 			if target != Target.SELF:
 				errors.append("%s: phải nhắm SELF" % type_name)
 	return errors

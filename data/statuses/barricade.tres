@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="StatusData" format=3]
+
+[ext_resource type="Script" path="res://src/data/status_data.gd" id="1_nl7ig"]
+[ext_resource type="Script" path="res://src/data/trigger_data.gd" id="2_x6vlx"]
+
+[resource]
+script = ExtResource("1_nl7ig")
+id = &"barricade"
+display_name = "Barricade"
+description = "Block is not removed at the start of your turn."
+icon_id = &"barricade"
+stack_mode = 0
+retains_block = true

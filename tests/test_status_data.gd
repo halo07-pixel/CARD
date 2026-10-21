@@ -45,7 +45,7 @@ func test_registry_rejects_duplicates_invalid_and_null() -> void:
 
 func test_starter_status_files_are_valid_and_have_expected_values() -> void:
 	var registry := StatusRegistry.load_from_dir(STATUS_DIR)
-	assert_eq(registry.size(), 5, "phải nạp đủ 5 status ban đầu (file lỗi/trùng id sẽ bị loại)")
+	assert_eq(registry.size(), 11, "5 status Giai đoạn 1 + 6 status Giai đoạn 2.1 (file lỗi/trùng id sẽ bị loại)")
 	assert_almost_eq(registry.get_status(&"strength").damage_dealt_add_per_stack, 1.0)
 	assert_almost_eq(registry.get_status(&"dexterity").block_gain_add_per_stack, 1.0)
 	assert_almost_eq(registry.get_status(&"vulnerable").damage_taken_mult, 1.5)
@@ -55,3 +55,40 @@ func test_starter_status_files_are_valid_and_have_expected_values() -> void:
 	assert_true(registry.get_status(&"weak").decays_at_turn_end)
 	assert_false(registry.get_status(&"strength").is_debuff)
 	assert_true(registry.get_status(&"vulnerable").is_debuff)
+
+
+func test_new_flag_rules() -> void:
+	assert_false(Factory.status(&"x", S.INTENSITY, {"negates_debuff": true, "is_debuff": true}).validate().is_empty())
+	assert_true(Factory.status(&"x", S.INTENSITY, {"negates_debuff": true}).validate().is_empty())
+	assert_false(Factory.status(&"x", S.INTENSITY, {"decay_after_turn_start": true}).validate().is_empty())
+	assert_true(Factory.status(&"x", S.DURATION, {"decay_after_turn_start": true}).validate().is_empty())
+	assert_true(Factory.status(&"x", S.INTENSITY, {"retains_block": true}).validate().is_empty())
+
+
+func test_trigger_errors_are_reported_with_index() -> void:
+	var bad := TriggerData.new()  # không có effect
+	var triggers: Array[TriggerData] = [bad]
+	var errors := Factory.status_with_triggers(&"x", triggers).validate()
+	assert_true(errors.size() > 0 and errors[0].begins_with("triggers[0]"))
+	var with_null: Array[TriggerData] = [null]
+	assert_false(Factory.status_with_triggers(&"y", with_null).validate().is_empty())
+
+
+func test_real_phase_2_statuses_have_designed_triggers() -> void:
+	var registry := StatusRegistry.load_from_dir(STATUS_DIR)
+	var poison := registry.get_status(&"poison")
+	assert_true(poison.is_debuff and poison.decay_after_turn_start)
+	assert_eq(poison.triggers[0].event, TriggerData.Event.TURN_START)
+	assert_eq(poison.triggers[0].effects[0].type, EffectData.Type.LOSE_HP)
+	assert_true(poison.triggers[0].scale_by_stacks)
+	var metallicize := registry.get_status(&"metallicize")
+	assert_eq(metallicize.triggers[0].event, TriggerData.Event.TURN_END)
+	assert_eq(metallicize.triggers[0].effects[0].type, EffectData.Type.BLOCK)
+	var thorns := registry.get_status(&"thorns")
+	assert_eq(thorns.triggers[0].event, TriggerData.Event.ATTACKED)
+	assert_eq(thorns.triggers[0].effects[0].target, EffectData.Target.EVENT_SOURCE)
+	var demon := registry.get_status(&"demon_form")
+	assert_eq(demon.triggers[0].effects[0].status_id, &"strength")
+	assert_true(registry.get_status(&"artifact").negates_debuff)
+	assert_true(registry.get_status(&"barricade").retains_block)
+	assert_false(registry.get_status(&"metallicize").is_debuff)

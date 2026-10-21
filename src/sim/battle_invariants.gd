@@ -42,6 +42,10 @@ func check() -> Array[String]:
 			violations.append("giáp quái %s âm" % unit.combatant.id)
 		if unit.is_alive() and (unit.intent == null or unit.current_move == null):
 			violations.append("quái sống %s không có ý định" % unit.combatant.id)
+	if c.trigger_queue_size() != 0:
+		violations.append("hàng đợi trigger còn %d hành động khi nghỉ" % c.trigger_queue_size())
+	if c.trigger_overflowed():
+		violations.append("hàng đợi trigger đã vượt giới hạn (vòng lặp?)")
 	var expected_ended := 1 if c.state.is_terminal() else 0
 	if _ended_count != expected_ended:
 		violations.append("battle_ended phát %d lần (cần %d)" % [_ended_count, expected_ended])

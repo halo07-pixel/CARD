@@ -106,14 +106,15 @@ func begin_play(card: CardInstance) -> bool:
 	return true
 
 
-## Bước 2: thẻ phải đang ở limbo; thẻ exhaust vào exhaust pile, còn lại vào discard.
+## Bước 2: thẻ phải đang ở limbo; thẻ exhaust và thẻ Power vào exhaust pile, còn lại vào discard.
 func finish_play(card: CardInstance) -> bool:
 	var index := _limbo.find(card) if card != null else -1
 	if index == -1:
 		push_warning("Deck.finish_play: thẻ không ở limbo, từ chối thao tác")
 		return false
 	_limbo.remove_at(index)
-	var destination := EXHAUST if card.data.exhaust else DISCARD
+	var leaves_cycle := card.data.exhaust or card.data.card_type == CardData.CardType.POWER
+	var destination := EXHAUST if leaves_cycle else DISCARD
 	if destination == EXHAUST:
 		_exhaust_pile.append(card)
 		card_exhausted.emit(card)

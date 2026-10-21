@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="StatusData" format=3]
+
+[ext_resource type="Script" path="res://src/data/status_data.gd" id="1_pweti"]
+[ext_resource type="Script" path="res://src/data/trigger_data.gd" id="2_f1bh8"]
+[ext_resource type="Script" path="res://src/data/effect_data.gd" id="3_1pvsc"]
+
+[sub_resource type="Resource" id="Resource_cl8ek"]
+script = ExtResource("3_1pvsc")
+type = 6
+amount = 1
+target = 0
+
+[sub_resource type="Resource" id="Resource_xb4b0"]
+script = ExtResource("2_f1bh8")
+effects = Array[ExtResource("3_1pvsc")]([SubResource("Resource_cl8ek")])
+scale_by_stacks = true
+
+[resource]
+script = ExtResource("1_pweti")
+id = &"poison"
+display_name = "Poison"
+description = "At the start of its turn, lose 1 HP per stack, then decrease by 1."
+icon_id = &"poison"
+is_debuff = true
+triggers = Array[ExtResource("2_f1bh8")]([SubResource("Resource_xb4b0")])
+decay_after_turn_start = true

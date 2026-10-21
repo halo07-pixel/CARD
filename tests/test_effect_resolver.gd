@@ -206,3 +206,67 @@ func test_real_starter_cards_work_end_to_end() -> void:
 		EffectResolver.resolve(effect, _hero, null, _enemies(), _ctx)
 	assert_eq(_a.hp, 24)
 	assert_eq(_hero.block, 5)
+
+
+func test_heal_restores_hp_and_reports_the_actual_amount() -> void:
+	_hero.take_damage(30)
+	var heal := EffectData.create(T.HEAL, 12, G.SELF)
+	var results := EffectResolver.resolve(heal, _hero, null, _enemies(), _ctx)
+	assert_eq(results[0].amount, 12)
+	assert_eq(_hero.hp, 62)
+	_hero.heal(999)
+	results = EffectResolver.resolve(heal, _hero, null, _enemies(), _ctx)
+	assert_eq(results[0].amount, 0, "đã đầy máu: hồi 0")
+	assert_eq(_hero.hp, 80, "không vượt máu tối đa")
+
+
+func test_lose_hp_bypasses_block_and_reports_the_actual_loss() -> void:
+	_hero.gain_block(50)
+	var effect := EffectData.create(T.LOSE_HP, 7, G.SELF)
+	var results := EffectResolver.resolve(effect, _hero, null, _enemies(), _ctx)
+	assert_eq(_hero.hp, 73)
+	assert_eq(_hero.block, 50, "mất máu trực tiếp không đụng giáp")
+	assert_eq(results[0].amount, 7)
+	_hero.take_damage(0)
+	_hero.lose_hp(66)  # còn 7 máu
+	results = EffectResolver.resolve(EffectData.create(T.LOSE_HP, 20, G.SELF), _hero, null, _enemies(), _ctx)
+	assert_eq(results[0].amount, 7, "chỉ mất số máu còn lại")
+	assert_false(_hero.is_alive())
+
+
+func test_lose_hp_can_hit_every_enemy() -> void:
+	var effect := EffectData.create(T.LOSE_HP, 4, G.ALL_ENEMIES)
+	var results := EffectResolver.resolve(effect, _hero, null, _enemies(), _ctx)
+	assert_eq(results.size(), 3)
+	assert_eq(_a.hp, 26)
+	assert_eq(_c.hp, 26)
+
+
+func test_event_source_target_hits_the_instigator() -> void:
+	var thorns := EffectData.create(T.DAMAGE, 3, G.EVENT_SOURCE)
+	var results := EffectResolver.resolve(thorns, _hero, _a, _enemies(), _ctx)
+	assert_eq(results.size(), 1)
+	assert_eq(_a.hp, 27)
+	assert_eq(_b.hp, 30, "chỉ kẻ gây sự kiện bị trúng")
+
+
+func test_event_source_is_silently_skipped_when_dead_or_missing() -> void:
+	var thorns := EffectData.create(T.DAMAGE, 3, G.EVENT_SOURCE)
+	assert_eq(EffectResolver.resolve(thorns, _hero, null, _enemies(), _ctx).size(), 0)
+	_a.take_damage(999)
+	assert_eq(EffectResolver.resolve(thorns, _hero, _a, _enemies(), _ctx).size(), 0)
+
+
+func test_event_source_multi_hit_stops_when_the_instigator_dies() -> void:
+	_a.take_damage(25)  # còn 5 máu
+	var thorns := EffectData.create(T.DAMAGE, 4, G.EVENT_SOURCE, 3)
+	var results := EffectResolver.resolve(thorns, _hero, _a, _enemies(), _ctx)
+	assert_eq(results.size(), 2)
+	assert_false(_a.is_alive())
+
+
+func test_results_carry_their_source() -> void:
+	var results := EffectResolver.resolve(Factory.damage_effect(5), _hero, _a, _enemies(), _ctx)
+	assert_true(results[0].source == _hero)
+	results = EffectResolver.resolve(EffectData.create(T.BLOCK, 5, G.SELF), _hero, null, _enemies(), _ctx)
+	assert_true(results[0].source == _hero)

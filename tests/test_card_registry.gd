@@ -12,7 +12,7 @@ func _real() -> CardRegistry:
 
 func test_loads_all_starter_cards_valid_and_linked() -> void:
 	var registry := _real()
-	assert_eq(registry.size(), 12, "4 thẻ cũ + 8 thẻ mới (file lỗi/trùng id sẽ bị loại)")
+	assert_eq(registry.size(), 19, "12 thẻ Giai đoạn 1 + 7 thẻ Giai đoạn 2.1 (file lỗi/trùng id sẽ bị loại)")
 	assert_eq(registry.link_errors(), [] as Array[String])
 	for id in [&"strike", &"strike+", &"defend", &"defend+", &"bash", &"cleave", &"iron_wave",
 			&"pommel_strike", &"shrug_it_off", &"twin_strike", &"adrenaline", &"thunderclap"]:
@@ -46,11 +46,29 @@ func test_new_cards_have_designed_values() -> void:
 func test_every_effect_type_is_covered_by_the_card_set() -> void:
 	var seen: Dictionary = {}
 	var registry := _real()
-	for id in [&"strike", &"defend", &"bash", &"cleave", &"iron_wave", &"pommel_strike",
-			&"shrug_it_off", &"twin_strike", &"adrenaline", &"thunderclap"]:
+	for id in registry.all_ids():
 		for effect in registry.get_card(id).effects:
 			seen[effect.type] = true
 	assert_eq(seen.size(), EffectData.Type.size(), "bộ thẻ mẫu phải dùng đủ mọi loại hiệu ứng")
+
+
+func test_phase_2_cards_have_designed_values() -> void:
+	var registry := _real()
+	var inflame := registry.get_card(&"inflame")
+	assert_eq(inflame.card_type, CardData.CardType.POWER)
+	assert_eq(inflame.effects[0].status_id, &"strength")
+	assert_eq(inflame.effects[0].amount, 2)
+	assert_eq(registry.get_card(&"demon_form").cost, 3)
+	assert_eq(registry.get_card(&"barricade").cost, 3)
+	assert_eq(registry.get_card(&"deadly_poison").effects[0].status_id, &"poison")
+	var bloodletting := registry.get_card(&"bloodletting")
+	assert_eq(bloodletting.cost, 0)
+	assert_eq(bloodletting.effects[0].type, T.LOSE_HP)
+	var bandage := registry.get_card(&"bandage_up")
+	assert_true(bandage.exhaust)
+	assert_eq(bandage.effects[0].type, T.HEAL)
+	for id in [&"inflame", &"metallicize", &"demon_form", &"barricade"]:
+		assert_eq(registry.get_card(id).card_type, CardData.CardType.POWER, String(id))
 
 
 func test_register_rejects_wrong_type_duplicate_invalid_and_null() -> void:

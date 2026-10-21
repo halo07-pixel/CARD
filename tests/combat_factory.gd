@@ -24,15 +24,15 @@ static func dexterity() -> StatusData:
 
 
 static func vulnerable() -> StatusData:
-	return status(&"vulnerable", S.DURATION, {"decays_at_turn_end": true, "damage_taken_mult": 1.5})
+	return status(&"vulnerable", S.DURATION, {"is_debuff": true, "decays_at_turn_end": true, "damage_taken_mult": 1.5})
 
 
 static func weak() -> StatusData:
-	return status(&"weak", S.DURATION, {"decays_at_turn_end": true, "damage_dealt_mult": 0.75})
+	return status(&"weak", S.DURATION, {"is_debuff": true, "decays_at_turn_end": true, "damage_dealt_mult": 0.75})
 
 
 static func frail() -> StatusData:
-	return status(&"frail", S.DURATION, {"decays_at_turn_end": true, "block_gain_mult": 0.75})
+	return status(&"frail", S.DURATION, {"is_debuff": true, "decays_at_turn_end": true, "block_gain_mult": 0.75})
 
 
 static func combatant(id: StringName = &"c", hp: int = 50) -> Combatant:
@@ -157,9 +157,9 @@ static func dummy_enemy(id: StringName = &"dummy", hp: int = 20, damage: int = 6
 
 
 static func battle(cards: Array[CardInstance], datas: Array[EnemyData], seed_value: int = 1,
-		config: BattleConfig = null, player_hp: int = 80) -> BattleController:
+		config: BattleConfig = null, player_hp: int = 80, statuses: StatusRegistry = null) -> BattleController:
 	return BattleController.create_from_data(combatant(&"player", player_hp), cards, datas,
-			registry(), seed_value, config)
+			statuses if statuses != null else registry(), seed_value, config)
 
 
 ## Thẻ chèn thẳng vào tay (độc lập với kết quả xáo bài) để test có tính xác định.
@@ -173,3 +173,30 @@ static func hand_card(controller: BattleController, id: StringName) -> CardInsta
 		if card.data.id == id:
 			return card
 	return null
+
+
+## --- Trigger cho test ---
+
+static func trigger(event: TriggerData.Event, effects: Array[EffectData], props: Dictionary = {}) -> TriggerData:
+	var data := TriggerData.new()
+	data.event = event
+	data.effects = effects
+	for key: String in props:
+		data.set(key, props[key])
+	return data
+
+
+## Trigger một effect (tiện cho phần lớn test).
+static func trigger1(event: TriggerData.Event, effect: EffectData, props: Dictionary = {}) -> TriggerData:
+	var effects: Array[EffectData] = [effect]
+	return trigger(event, effects, props)
+
+
+static func status_with_triggers(id: StringName, triggers: Array[TriggerData], props: Dictionary = {}) -> StatusData:
+	var overrides := {"triggers": triggers}
+	overrides.merge(props, true)
+	return status(id, S.INTENSITY, overrides)
+
+
+static func real_status(id: StringName) -> StatusData:
+	return registry().get_status(id)

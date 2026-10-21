@@ -13,6 +13,7 @@ signal enemy_acted(unit: EnemyUnit, move: EnemyMove, results: Array[EffectResult
 signal enemy_defeated(unit: EnemyUnit)
 signal action_rejected(reason: StringName)
 signal battle_ended(victory: bool)
+signal triggered(owner: Combatant, source_key: StringName, results: Array[EffectResult])
 
 const REASON_ALREADY_STARTED := &"already_started"
 const REASON_BATTLE_OVER := &"battle_over"
@@ -37,6 +38,7 @@ var end_reason: StringName = &""
 var _status_registry: StatusRegistry = null
 var _rng: RandomNumberGenerator = null
 var _reported_dead: Dictionary = {}
+var _triggers := TriggerRunner.new()
 
 
 ## Tạo trận từ các EnemyUnit dựng sẵn. Trả null nếu tham số không hợp lệ.
@@ -86,6 +88,8 @@ func start_battle() -> bool:
 	for unit in enemies:
 		unit.plan_next_move(player)
 		intent_changed.emit(unit)
+	_fire_and_drain(BattleEvent.create(TriggerData.Event.BATTLE_START))
+	_refresh_intents()
 	_begin_player_turn()
 	return true
 
@@ -101,8 +105,10 @@ func play_card(card: CardInstance, target: EnemyUnit = null) -> bool:
 	deck.begin_play(card)
 	var results := _resolve_card_effects(card, target)
 	deck.finish_play(card)
-	_refresh_intents()
+	_triggers.fire(BattleEvent.create(TriggerData.Event.CARD_PLAYED, player, null, 0, card), self)
 	card_played.emit(card, target, results)
+	_triggers.drain(self)
+	_refresh_intents()
 	_check_end()
 	return true
 
@@ -112,6 +118,9 @@ func end_player_turn() -> bool:
 		return _reject(REASON_BATTLE_OVER)
 	if not state.is_player_turn():
 		return _reject(REASON_NOT_PLAYER_TURN)
+	_fire_and_drain(BattleEvent.create(TriggerData.Event.TURN_END, player))
+	if _check_end():
+		return true
 	deck.end_turn_discard()
 	player.end_turn()
 	state.transition(BattleState.Phase.ENEMY_TURN)
@@ -129,6 +138,15 @@ func valid_targets(card: CardInstance) -> Array[EnemyUnit]:
 	if card != null and card.data.target_mode == CardData.TargetMode.SINGLE_ENEMY:
 		targets.assign(living_enemies())
 	return targets
+
+
+## Số hành động trigger đang chờ (phải bằng 0 khi trận nghỉ) và cờ đã từng vượt giới hạn.
+func trigger_queue_size() -> int:
+	return _triggers.queue_size()
+
+
+func trigger_overflowed() -> bool:
+	return _triggers.overflowed
 
 
 func living_enemies() -> Array[EnemyUnit]:
@@ -186,11 +204,18 @@ static func _setup_problems(p_player: Combatant, cards: Array[CardInstance], uni
 
 func _begin_player_turn() -> void:
 	turn += 1
+	_triggers.new_turn()
 	state.transition(BattleState.Phase.PLAYER_START)
-	player.start_turn()
+	if turn > 1:
+		player.start_turn()  # lượt 1 giữ nguyên giáp sinh ra từ sự kiện BATTLE_START (kiểu relic Anchor)
 	_set_energy(config.max_energy)
 	turn_started.emit(turn, true)
+	_fire_and_drain(BattleEvent.create(TriggerData.Event.TURN_START, player))
+	player.decay_after_turn_start()
+	if _check_end():
+		return
 	deck.draw(config.draw_per_turn)
+	_refresh_intents()
 	state.transition(BattleState.Phase.PLAYER_TURN)
 
 
@@ -220,9 +245,13 @@ func _resolve_card_effects(card: CardInstance, target: EnemyUnit) -> Array[Effec
 	var opponents := _enemy_combatants()
 	var chosen: Combatant = target.combatant if target != null else null
 	for effect in card.data.effects:
+		if not player.is_alive():
+			break  # tự làm mình chết giữa chừng (vd. Bloodletting ở 3 máu): các effect sau bị bỏ
 		if effect.target == EffectData.Target.TARGET_ENEMY and (chosen == null or not chosen.is_alive()):
 			continue  # mục tiêu đã chết giữa chừng (vd. effect đầu tiên đã hạ nó)
-		results.append_array(EffectResolver.resolve(effect, player, chosen, opponents, self))
+		var effect_results := EffectResolver.resolve(effect, player, chosen, opponents, self)
+		_triggers.events_from_results(effect_results, false, self)
+		results.append_array(effect_results)
 	return results
 
 
@@ -232,20 +261,8 @@ func _run_enemy_turn() -> void:
 	for unit in enemies:
 		if state.is_terminal():
 			return
-		if not unit.is_alive():
-			continue
-		unit.combatant.start_turn()
-		var results: Array[EffectResult] = []
-		for effect in unit.current_move.effects:
-			if not player.is_alive():
-				break
-			results.append_array(EffectResolver.resolve(effect, unit.combatant, player, opponents, self))
-		enemy_acted.emit(unit, unit.current_move, results)
-		unit.combatant.end_turn()
-		if _check_end():
+		if unit.is_alive() and not _run_enemy_unit_turn(unit, opponents):
 			return
-		unit.plan_next_move(player)
-		intent_changed.emit(unit)
 	state.transition(BattleState.Phase.CHECK_END)
 	if _check_end():
 		return
@@ -254,6 +271,38 @@ func _run_enemy_turn() -> void:
 		return
 	_refresh_intents()
 	_begin_player_turn()
+
+
+## Lượt của MỘT quái. Trả false nếu trận đã kết thúc giữa chừng (các quái sau không được đi nữa).
+func _run_enemy_unit_turn(unit: EnemyUnit, opponents: Array[Combatant]) -> bool:
+	var combatant := unit.combatant
+	combatant.start_turn()
+	_fire_and_drain(BattleEvent.create(TriggerData.Event.TURN_START, combatant))
+	combatant.decay_after_turn_start()
+	if _check_end():
+		return false
+	if not unit.is_alive():
+		return true  # chết vì Poison đầu lượt: bỏ lượt, các quái khác vẫn đi
+	var results: Array[EffectResult] = []
+	for effect in unit.current_move.effects:
+		if not player.is_alive():
+			break
+		var effect_results := EffectResolver.resolve(effect, combatant, player, opponents, self)
+		_triggers.events_from_results(effect_results, false, self)
+		results.append_array(effect_results)
+	enemy_acted.emit(unit, unit.current_move, results)
+	_triggers.drain(self)
+	if _check_end():
+		return false
+	if unit.is_alive():
+		_fire_and_drain(BattleEvent.create(TriggerData.Event.TURN_END, combatant))
+		combatant.end_turn()
+		if _check_end():
+			return false
+	if unit.is_alive():
+		unit.plan_next_move(player)
+		intent_changed.emit(unit)
+	return true
 
 
 ## Người chơi chết được xét TRƯỚC (thua ưu tiên hơn thắng nếu xảy ra cùng lúc).
@@ -271,8 +320,15 @@ func _check_end() -> bool:
 
 func _finish(victory: bool, reason: StringName) -> void:
 	end_reason = reason
+	if victory:
+		_fire_and_drain(BattleEvent.create(TriggerData.Event.BATTLE_VICTORY))  # trước battle_ended
 	state.transition(BattleState.Phase.VICTORY if victory else BattleState.Phase.DEFEAT)
 	battle_ended.emit(victory)
+
+
+func _fire_and_drain(event: BattleEvent) -> void:
+	_triggers.fire(event, self)
+	_triggers.drain(self)
 
 
 func _enemy_combatants() -> Array[Combatant]:

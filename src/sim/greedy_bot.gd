@@ -14,7 +14,7 @@ const SELF_BUFF_VALUE := 3.0
 const MIN_VALUE := 0.01
 const COST_SMOOTHING := 0.5  ## thẻ 0 năng lượng không có giá trị "vô hạn"
 
-const STATUS_VALUE := {&"vulnerable": 4.0, &"weak": 3.0}
+const STATUS_VALUE := {&"vulnerable": 4.0, &"weak": 3.0, &"poison": 1.5}
 const OTHER_DEBUFF_VALUE := 2.0
 
 
@@ -24,6 +24,8 @@ func act(controller: BattleController) -> void:
 	var best_value := MIN_VALUE
 	var incoming := _incoming_damage(controller)
 	for card in _playable_cards(controller):
+		if _would_kill_the_player(controller, card):
+			continue
 		var targets := controller.valid_targets(card)
 		var options: Array = [null] if targets.is_empty() else targets
 		var cost := controller.energy if card.data.is_x_cost else card.get_cost()
@@ -38,6 +40,15 @@ func act(controller: BattleController) -> void:
 		controller.end_player_turn()
 	else:
 		controller.play_card(best_card, best_target)
+
+
+## Thẻ tự gây mất máu đủ để giết chính mình (vd. Bloodletting ở 3 máu): bot tham lam không chơi.
+func _would_kill_the_player(controller: BattleController, card: CardInstance) -> bool:
+	var self_loss := 0
+	for effect in card.data.effects:
+		if effect.type == EffectData.Type.LOSE_HP and effect.target == EffectData.Target.SELF:
+			self_loss += effect.amount
+	return self_loss >= controller.player.hp
 
 
 func _incoming_damage(controller: BattleController) -> int:
@@ -64,6 +75,11 @@ func _score(controller: BattleController, card: CardInstance, target: EnemyUnit,
 				score += ENERGY_VALUE * effect.amount
 			EffectData.Type.APPLY_STATUS:
 				score += _status_score(effect, living_count)
+			EffectData.Type.HEAL:
+				score += minf(effect.amount, controller.player.max_hp - controller.player.hp)
+			EffectData.Type.LOSE_HP:
+				if effect.target == EffectData.Target.SELF:
+					score -= effect.amount  # trả giá bằng máu của chính mình
 	return score
 
 

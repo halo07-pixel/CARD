@@ -37,6 +37,14 @@ func size() -> int:
 	return _by_id.size()
 
 
+## Mọi id đang có trong registry (theo thứ tự nạp).
+func all_ids() -> Array[StringName]:
+	var ids: Array[StringName] = []
+	for id: StringName in _by_id.keys():
+		ids.append(id)
+	return ids
+
+
 func _find(id: StringName) -> Resource:
 	return _by_id.get(id) as Resource
 

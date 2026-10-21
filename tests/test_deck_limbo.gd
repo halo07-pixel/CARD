@@ -84,3 +84,15 @@ func test_start_battle_requires_empty_limbo() -> void:
 	var deck := Deck.new(Factory.instances(3), Factory.rng())
 	assert_true(deck.start_battle())
 	assert_false(deck.start_battle())
+
+
+func test_power_cards_leave_the_cycle_after_being_played() -> void:
+	var power := Factory.instance(&"power", {"card_type": CardData.CardType.POWER})
+	var normal := Factory.instance(&"normal")
+	var deck := _started([power, normal] as Array[CardInstance])
+	deck.draw(2)
+	assert_true(deck.play_card(power))
+	assert_true(deck.play_card(normal))
+	assert_eq(deck.find_pile(power), Deck.EXHAUST, "Power không quay lại bộ bài")
+	assert_eq(deck.find_pile(normal), Deck.DISCARD)
+	assert_eq(deck.total_count(), 2)

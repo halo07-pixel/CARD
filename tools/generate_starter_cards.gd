@@ -39,6 +39,21 @@ func _initialize() -> void:
 		_make(&"thunderclap", "Thunderclap", "Deal {damage} damage and apply {vulnerable} Vulnerable to ALL enemies.",
 				C.ATTACK, [_dmg(4, G.ALL_ENEMIES), _status(1, &"vulnerable", G.ALL_ENEMIES)],
 				M.ALL_ENEMIES, {}),
+		_make(&"inflame", "Inflame", "Gain {strength} Strength.", C.POWER,
+				[_status(2, &"strength", G.SELF)], M.SELF, {"rarity": R.UNCOMMON}),
+		_make(&"metallicize", "Metallicize", "At the end of your turn, gain {metallicize} Block.", C.POWER,
+				[_status(3, &"metallicize", G.SELF)], M.SELF, {"rarity": R.UNCOMMON}),
+		_make(&"demon_form", "Demon Form", "At the start of your turn, gain {demon_form} Strength.", C.POWER,
+				[_status(2, &"demon_form", G.SELF)], M.SELF, {"rarity": R.RARE, "cost": 3}),
+		_make(&"barricade", "Barricade", "Block is not removed at the start of your turn.", C.POWER,
+				[_status(1, &"barricade", G.SELF)], M.SELF, {"rarity": R.RARE, "cost": 3}),
+		_make(&"deadly_poison", "Deadly Poison", "Apply {poison} Poison.", C.SKILL,
+				[_status(5, &"poison", G.TARGET_ENEMY)], M.SINGLE_ENEMY, {}),
+		_make(&"bloodletting", "Bloodletting", "Lose {hp} HP. Gain {energy} Energy.", C.SKILL,
+				[EffectData.create(T.LOSE_HP, 3, G.SELF), EffectData.create(T.GAIN_ENERGY, 2, G.SELF)], M.SELF,
+				{"rarity": R.UNCOMMON, "cost": 0}),
+		_make(&"bandage_up", "Bandage Up", "Heal {heal} HP. Exhaust.", C.SKILL,
+				[EffectData.create(T.HEAL, 4, G.SELF)], M.SELF, {"cost": 0, "exhaust": true}),
 	]
 	var ok := true
 	for card in cards:

@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="StatusData" format=3]
+
+[ext_resource type="Script" path="res://src/data/status_data.gd" id="1_mjpur"]
+[ext_resource type="Script" path="res://src/data/trigger_data.gd" id="2_no425"]
+[ext_resource type="Script" path="res://src/data/effect_data.gd" id="3_brr2t"]
+
+[sub_resource type="Resource" id="Resource_nbv61"]
+script = ExtResource("3_brr2t")
+type = 4
+amount = 1
+status_id = &"strength"
+target = 0
+
+[sub_resource type="Resource" id="Resource_2g2yh"]
+script = ExtResource("2_no425")
+effects = Array[ExtResource("3_brr2t")]([SubResource("Resource_nbv61")])
+scale_by_stacks = true
+
+[resource]
+script = ExtResource("1_mjpur")
+id = &"demon_form"
+display_name = "Demon Form"
+description = "At the start of your turn, gain 1 Strength per stack."
+icon_id = &"demon_form"
+stack_mode = 0
+triggers = Array[ExtResource("2_no425")]([SubResource("Resource_2g2yh")])

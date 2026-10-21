@@ -1,6 +1,7 @@
 extends SceneTree
-## Chạy: godot --headless --path . -s res://tests/run_tests.gd
+## Chạy: godot --headless --path . -s res://tests/run_tests.gd [-- --only=chuoi1,chuoi2]
 ## Quét đệ quy res://tests/ tìm test_*.gd. Thoát mã 1 nếu có lỗi hoặc không có test nào.
+## --only: chỉ chạy các file test có tên chứa một trong các chuỗi (nhanh khi đang sửa một phần).
 
 const TEST_ROOT := "res://tests"
 const TEST_FILE_PREFIX := "test_"
@@ -16,7 +17,7 @@ func _initialize() -> void:
 
 
 func _run_all() -> int:
-	var files := _collect_test_files(TEST_ROOT)
+	var files := _filter_files(_collect_test_files(TEST_ROOT), _only_filters())
 	files.sort()
 	var passed := 0
 	var failed := 0
@@ -73,3 +74,23 @@ func _collect_test_files(dir_path: String) -> Array[String]:
 		if file_name.begins_with(TEST_FILE_PREFIX) and file_name.ends_with(".gd") and file_name != BASE_NAME:
 			result.append(dir_path.path_join(file_name))
 	return result
+
+
+## Các chuỗi lọc từ tham số --only=a,b (rỗng = chạy tất cả).
+func _only_filters() -> PackedStringArray:
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--only="):
+			return arg.trim_prefix("--only=").split(",", false)
+	return PackedStringArray()
+
+
+func _filter_files(files: Array[String], filters: PackedStringArray) -> Array[String]:
+	if filters.is_empty():
+		return files
+	var kept: Array[String] = []
+	for path in files:
+		for filter in filters:
+			if path.get_file().contains(filter):
+				kept.append(path)
+				break
+	return kept

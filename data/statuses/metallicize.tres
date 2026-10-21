@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="StatusData" format=3]
+
+[ext_resource type="Script" path="res://src/data/status_data.gd" id="1_o248h"]
+[ext_resource type="Script" path="res://src/data/trigger_data.gd" id="2_yj1xn"]
+[ext_resource type="Script" path="res://src/data/effect_data.gd" id="3_ivpwe"]
+
+[sub_resource type="Resource" id="Resource_w77kw"]
+script = ExtResource("3_ivpwe")
+type = 1
+amount = 1
+target = 0
+
+[sub_resource type="Resource" id="Resource_l3vhh"]
+script = ExtResource("2_yj1xn")
+event = 3
+effects = Array[ExtResource("3_ivpwe")]([SubResource("Resource_w77kw")])
+scale_by_stacks = true
+
+[resource]
+script = ExtResource("1_o248h")
+id = &"metallicize"
+display_name = "Metallicize"
+description = "At the end of your turn, gain 1 Block per stack."
+icon_id = &"metallicize"
+stack_mode = 0
+triggers = Array[ExtResource("2_yj1xn")]([SubResource("Resource_l3vhh")])

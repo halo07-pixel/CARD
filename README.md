@@ -8,6 +8,7 @@ Mục tiêu: bản chơi được đầy đủ vòng lặp (map, chiến đấu,
 ```bash
 # cần Godot 4.7.x trong PATH, hoặc đặt GODOT=/duong/dan/toi/godot
 bash tools/run_tests.sh
+bash tools/run_tests.sh --only=test_battle,test_trigger   # chỉ chạy các file test có tên chứa chuỗi
 ```
 
 Runner quét `tests/test_*.gd`, thoát mã `1` nếu có test lỗi. Trên máy không có màn hình vẫn chạy được.
@@ -28,7 +29,7 @@ Sau mỗi bước, các điều kiện bất biến (tổng số thẻ, máu/nă
 | Thư mục | Nội dung |
 |---|---|
 | `src/data/` | Resource dữ liệu thuần: `CardData`, `EffectData`, `StatusData`, `EnemyData`, `EnemyMove`, `CharacterData` (không chứa logic, không giữ hình) |
-| `src/core/` | Lõi chiến đấu, không dùng node/UI: `Deck`, `Combatant`, `EffectResolver`, `DamageCalculator`, `EnemyAI`, `EnemyUnit`, `BattleController`, `BattleState`, `BattleFactory`, `CardRegistry`... |
+| `src/core/` | Lõi chiến đấu, không dùng node/UI: `Deck`, `Combatant`, `EffectResolver`, `DamageCalculator`, `EnemyAI`, `EnemyUnit`, `BattleController`, `BattleState`, `BattleFactory`, `CardRegistry`, và hệ thống sự kiện/trigger (`TriggerDispatcher`, `TriggerRunner`, `ActionQueue`)... |
 | `src/sim/` | Bot tự chơi (`RandomBot`, `GreedyBot`), `BattleSimulator`, `BattleInvariants`: tìm lỗi và đo cân bằng, chạy headless |
 | `src/autoload/` | `EventBus`, `RunState`, `SaveSystem`, `AudioManager`, `SceneRouter` |
 | `data/` | File `.tres` của thẻ, quái, trạng thái (thêm nội dung = thêm file) |
@@ -52,7 +53,10 @@ Sau mỗi bước, các điều kiện bất biến (tổng số thẻ, máu/nă
 - [x] **Giai đoạn 1.3b** - `BattleState`, `BattleController` (lượt chơi, thắng/thua, tái lập theo seed), vùng "limbo" của `Deck`
 - [x] **Giai đoạn 1.3c** - `CharacterData` (Warrior), `CardRegistry`, `BattleFactory`, 8 thẻ mới, bot tự chơi và trình mô phỏng
 - [x] **Giai đoạn 1 hoàn tất** - lõi chiến đấu chơi được hoàn toàn bằng code, chưa có UI
-- [ ] **Giai đoạn 2** - Hook/trigger, relic, potion, từ khóa nâng cao (X-cost, nâng cấp)
+- [x] **Giai đoạn 2.1** - Sự kiện và trigger (Poison, Thorns, Metallicize, Artifact, Barricade, Demon Form), thẻ Power, hiệu ứng `HEAL`/`LOSE_HP`
+- [ ] **Giai đoạn 2.2** - Relic (`RelicData`, 8 relic mẫu)
+- [ ] **Giai đoạn 2.3** - Potion, X-cost, nâng cấp thẻ
+- [ ] **Giai đoạn 2.4** - Nội dung mẫu (quái có trạng thái đầu trận), bot dùng potion, mô phỏng tổng hợp
 - [ ] **Giai đoạn 3** - UI chiến đấu (tay bài, kéo thả, ý định quái)
 - [ ] **Giai đoạn 4** - Cấu trúc run: map, thưởng, cửa hàng, lửa trại, sự kiện
 - [ ] **Giai đoạn 5** - Menu chính, chọn nhân vật, lưu/tiếp tục run, cài đặt
@@ -60,4 +64,4 @@ Sau mỗi bước, các điều kiện bất biến (tổng số thẻ, máu/nă
 - [ ] **Giai đoạn 7** - Asset CC0, âm thanh, hiệu ứng
 - [ ] **Giai đoạn 8** - Cân bằng bằng bot, đóng gói
 
-Số test hiện tại: 278 (đều đạt).
+Số test hiện tại: 360 (đều đạt).

@@ -109,3 +109,63 @@ func test_upgraded_cards_are_stronger() -> void:
 	assert_eq(_hp(controller), 11, "Strike+ gây 9")
 	assert_true(controller.play_card(Factory.inject(controller, _real(&"defend+"))))
 	assert_eq(controller.player.block, 8, "Defend+ cho 8 giáp")
+
+
+## --- Thẻ Giai đoạn 2.1 ---
+
+func test_inflame_is_a_power_that_grants_strength() -> void:
+	var controller := _battle()
+	var inflame := Factory.inject(controller, _real(&"inflame"))
+	assert_true(controller.play_card(inflame))
+	assert_eq(controller.player.get_status(&"strength"), 2)
+	assert_eq(controller.deck.find_pile(inflame), Deck.EXHAUST, "Power rời vòng xáo bài")
+	assert_eq(controller.energy, 2)
+
+
+func test_demon_form_and_barricade_cost_three_and_apply_their_status() -> void:
+	var controller := _battle()
+	assert_true(controller.play_card(Factory.inject(controller, _real(&"demon_form"))))
+	assert_eq(controller.energy, 0)
+	assert_eq(controller.player.get_status(&"demon_form"), 2)
+	var other := _battle()
+	assert_true(other.play_card(Factory.inject(other, _real(&"barricade"))))
+	assert_eq(other.player.get_status(&"barricade"), 1)
+	assert_eq(other.energy, 0)
+
+
+func test_deadly_poison_ticks_at_the_start_of_the_enemy_turn() -> void:
+	var controller := _battle(1, 30)
+	assert_true(controller.play_card(Factory.inject(controller, _real(&"deadly_poison")), controller.enemies[0]))
+	assert_eq(controller.enemies[0].combatant.get_status(&"poison"), 5)
+	controller.end_player_turn()
+	assert_eq(_hp(controller), 25)
+	assert_eq(controller.enemies[0].combatant.get_status(&"poison"), 4)
+
+
+func test_bloodletting_costs_hp_ignoring_block_and_gives_energy() -> void:
+	var controller := _battle()
+	controller.player.gain_block(10)
+	assert_true(controller.play_card(Factory.inject(controller, _real(&"bloodletting"))))
+	assert_eq(controller.player.hp, 77)
+	assert_eq(controller.player.block, 10, "mất máu trực tiếp không đụng giáp")
+	assert_eq(controller.energy, 5, "cost 0, +2 năng lượng")
+
+
+func test_bandage_up_heals_and_exhausts() -> void:
+	var controller := _battle()
+	controller.player.take_damage(30)
+	var bandage := Factory.inject(controller, _real(&"bandage_up"))
+	assert_true(controller.play_card(bandage))
+	assert_eq(controller.player.hp, 54)
+	assert_eq(controller.deck.find_pile(bandage), Deck.EXHAUST)
+
+
+func test_a_card_that_kills_the_player_stops_resolving_its_other_effects() -> void:
+	var controller := _battle()
+	var rec := Recorder.new(controller)
+	controller.player.take_damage(77)  # còn 3 máu
+	assert_true(controller.play_card(Factory.inject(controller, _real(&"bloodletting"))))
+	assert_false(controller.player.is_alive())
+	assert_eq(controller.energy, 3, "effect nhận năng lượng phía sau bị bỏ")
+	assert_eq(controller.state.phase, BattleState.Phase.DEFEAT)
+	assert_eq(rec.with_prefix("ended:"), ["ended:false"])
