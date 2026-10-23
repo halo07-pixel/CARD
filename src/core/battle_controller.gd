@@ -29,6 +29,7 @@ const END_TURN_CAP := &"turn_cap"
 var player: Combatant = null
 var deck: Deck = null
 var enemies: Array[EnemyUnit] = []
+var relics: Array[RelicData] = []
 var state := BattleState.new()
 var config: BattleConfig = null
 var energy: int = 0
@@ -45,9 +46,9 @@ var _triggers := TriggerRunner.new()
 ## Cùng seed + cùng chuỗi hành động => cùng kết quả (RNG xáo bài và RNG trận đấu tách riêng).
 static func create(p_player: Combatant, cards: Array[CardInstance], units: Array[EnemyUnit],
 		registry: StatusRegistry, seed_value: int = 1, p_config: BattleConfig = null,
-		battle_rng: RandomNumberGenerator = null) -> BattleController:
+		battle_rng: RandomNumberGenerator = null, p_relics: Array[RelicData] = []) -> BattleController:
 	var cfg := p_config if p_config != null else BattleConfig.new()
-	var problems := _setup_problems(p_player, cards, units, registry, cfg)
+	var problems := _setup_problems(p_player, cards, units, registry, cfg, p_relics)
 	if not problems.is_empty():
 		push_error("BattleController.create: %s" % [problems])
 		return null
@@ -55,6 +56,7 @@ static func create(p_player: Combatant, cards: Array[CardInstance], units: Array
 	controller.player = p_player
 	controller.config = cfg
 	controller.enemies = units.duplicate()
+	controller.relics = p_relics.duplicate()
 	controller._status_registry = registry
 	controller._rng = battle_rng if battle_rng != null else _derived_rng(seed_value)
 	var deck_rng := RandomNumberGenerator.new()
@@ -67,7 +69,8 @@ static func create(p_player: Combatant, cards: Array[CardInstance], units: Array
 
 ## Tiện ích: dựng EnemyUnit từ EnemyData (id dạng "slime_0", "slime_1"...) dùng chung RNG của trận.
 static func create_from_data(p_player: Combatant, cards: Array[CardInstance], datas: Array[EnemyData],
-		registry: StatusRegistry, seed_value: int = 1, p_config: BattleConfig = null) -> BattleController:
+		registry: StatusRegistry, seed_value: int = 1, p_config: BattleConfig = null,
+		p_relics: Array[RelicData] = []) -> BattleController:
 	var rng := _derived_rng(seed_value)
 	var units: Array[EnemyUnit] = []
 	for i in datas.size():
@@ -78,7 +81,7 @@ static func create_from_data(p_player: Combatant, cards: Array[CardInstance], da
 		if unit == null:
 			return null
 		units.append(unit)
-	return create(p_player, cards, units, registry, seed_value, p_config, rng)
+	return create(p_player, cards, units, registry, seed_value, p_config, rng, p_relics)
 
 
 func start_battle() -> bool:
@@ -184,7 +187,7 @@ static func _derived_rng(seed_value: int) -> RandomNumberGenerator:
 
 
 static func _setup_problems(p_player: Combatant, cards: Array[CardInstance], units: Array[EnemyUnit],
-		registry: StatusRegistry, cfg: BattleConfig) -> Array[String]:
+		registry: StatusRegistry, cfg: BattleConfig, p_relics: Array[RelicData]) -> Array[String]:
 	var problems: Array[String] = []
 	if p_player == null or not p_player.is_alive():
 		problems.append("người chơi null hoặc đã chết")
@@ -198,6 +201,10 @@ static func _setup_problems(p_player: Combatant, cards: Array[CardInstance], uni
 			break
 	if registry == null:
 		problems.append("thiếu StatusRegistry")
+	for relic in p_relics:
+		if relic == null:
+			problems.append("có RelicData null")
+			break
 	problems.append_array(cfg.validate())
 	return problems
 

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="RelicData" format=3]
+
+[ext_resource type="Script" path="res://src/data/relic_data.gd" id="1_5kcoe"]
+[ext_resource type="Script" path="res://src/data/trigger_data.gd" id="2_g8dun"]
+
+[resource]
+script = ExtResource("1_5kcoe")
+id = &"wide_lens"
+display_name = "Wide Lens"
+description = "Draw 1 additional card each turn."
+icon_id = &"wide_lens"
+rarity = 2
+draw_per_turn_bonus = 1

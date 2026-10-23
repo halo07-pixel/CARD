@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="RelicData" format=3]
+
+[ext_resource type="Script" path="res://src/data/relic_data.gd" id="1_slgjb"]
+[ext_resource type="Script" path="res://src/data/trigger_data.gd" id="2_e03e6"]
+
+[resource]
+script = ExtResource("1_slgjb")
+id = &"energy_crystal"
+display_name = "Energy Crystal"
+description = "Gain 1 additional Energy each turn."
+icon_id = &"energy_crystal"
+rarity = 4
+max_energy_bonus = 1

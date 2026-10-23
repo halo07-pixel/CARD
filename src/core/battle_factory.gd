@@ -15,12 +15,25 @@ static func create_player(character: CharacterData, current_hp: int = -1) -> Com
 ## Trả null (kèm log) nếu thiếu dữ liệu: id thẻ/quái không tồn tại, registry null, nhân vật lỗi...
 static func create(character: CharacterData, player: Combatant, deck_ids: Array[StringName],
 		enemy_ids: Array[StringName], cards: CardRegistry, enemies: EnemyRegistry,
-		statuses: StatusRegistry, seed_value: int = 1, turn_cap: int = 0) -> BattleController:
+		statuses: StatusRegistry, seed_value: int = 1, turn_cap: int = 0,
+		relic_ids: Array[StringName] = [], relic_registry: RelicRegistry = null) -> BattleController:
 	if character == null or player == null or cards == null or enemies == null or statuses == null:
 		push_error("BattleFactory.create: thiếu character/player/registry")
 		return null
+	var relics: Array[RelicData] = []
+	if not relic_ids.is_empty():
+		if relic_registry == null:
+			push_error("BattleFactory.create: có relic_ids nhưng thiếu RelicRegistry")
+			return null
+		relics = relic_registry.resolve(relic_ids)
+		if relics.is_empty():
+			push_error("BattleFactory.create: có relic không tồn tại")
+			return null
 	var config := character.make_battle_config()
 	config.turn_cap = turn_cap
+	for relic in relics:
+		config.max_energy += relic.max_energy_bonus
+		config.draw_per_turn += relic.draw_per_turn_bonus
 	var datas: Array[EnemyData] = []
 	for enemy_id in enemy_ids:
 		var data := enemies.get_enemy(enemy_id)
@@ -32,4 +45,4 @@ static func create(character: CharacterData, player: Combatant, deck_ids: Array[
 	if instances.is_empty():
 		push_error("BattleFactory.create: bộ bài rỗng hoặc có thẻ không tồn tại")
 		return null
-	return BattleController.create_from_data(player, instances, datas, statuses, seed_value, config)
+	return BattleController.create_from_data(player, instances, datas, statuses, seed_value, config, relics)

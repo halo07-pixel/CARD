@@ -13,6 +13,8 @@ var cards: CardRegistry
 var enemies: EnemyRegistry
 var statuses: StatusRegistry
 var deck_ids: Array[StringName] = []
+var relic_ids: Array[StringName] = []  ## relic người chơi mang theo trong mọi trận mô phỏng
+var relics: RelicRegistry = null
 var turn_cap: int = 60  ## trận bế tắc kết thúc (tính là thua) thay vì chạy vô hạn
 
 
@@ -49,7 +51,7 @@ func run_scenario(scenario_name: String, enemy_ids: Array[StringName], bot_kind:
 func _run_battle(enemy_ids: Array[StringName], bot_kind: StringName, seed_value: int, stats: ScenarioStats) -> void:
 	var player := BattleFactory.create_player(character)
 	var controller := BattleFactory.create(character, player, deck_ids, enemy_ids,
-			cards, enemies, statuses, seed_value, turn_cap)
+			cards, enemies, statuses, seed_value, turn_cap, relic_ids, relics)
 	var bot_rng := RandomNumberGenerator.new()
 	bot_rng.seed = seed_value * 7919 + 13
 	var bot := make_bot(bot_kind, bot_rng)

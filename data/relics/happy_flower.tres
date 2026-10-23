@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="RelicData" format=3]
+
+[ext_resource type="Script" path="res://src/data/relic_data.gd" id="1_i08xu"]
+[ext_resource type="Script" path="res://src/data/trigger_data.gd" id="2_l8tss"]
+[ext_resource type="Script" path="res://src/data/effect_data.gd" id="3_ygqt4"]
+
+[sub_resource type="Resource" id="Resource_85tdj"]
+script = ExtResource("3_ygqt4")
+type = 3
+amount = 1
+target = 0
+
+[sub_resource type="Resource" id="Resource_ir5v1"]
+script = ExtResource("2_l8tss")
+effects = Array[ExtResource("3_ygqt4")]([SubResource("Resource_85tdj")])
+every_n = 3
+
+[resource]
+script = ExtResource("1_i08xu")
+id = &"happy_flower"
+display_name = "Happy Flower"
+description = "Every 3 turns, gain 1 Energy."
+icon_id = &"happy_flower"
+triggers = Array[ExtResource("2_l8tss")]([SubResource("Resource_ir5v1")])

@@ -180,3 +180,20 @@ func test_sources_follow_the_statuses_currently_on_the_combatant() -> void:
 	c.add_status(poison, 1)
 	c.take_damage(999)
 	assert_eq(TriggerSource.from_statuses(c).size(), 0, "đơn vị đã chết không có nguồn trigger")
+
+
+func test_relic_sources_use_relic_keys_stacks_of_one_and_skip_relics_without_triggers() -> void:
+	var owner := _owner()
+	var with_trigger := RelicData.new()
+	with_trigger.id = &"anchor"
+	with_trigger.triggers = [_trigger(E.BATTLE_START)] as Array[TriggerData]
+	var bonus_only := RelicData.new()
+	bonus_only.id = &"crystal"
+	bonus_only.max_energy_bonus = 1
+	var relics: Array[RelicData] = [with_trigger, bonus_only]
+	var sources := TriggerSource.from_relics(owner, relics)
+	assert_eq(sources.size(), 1, "relic chỉ có bonus tĩnh không phải nguồn trigger")
+	assert_eq(sources[0].key, &"relic:anchor")
+	assert_eq(sources[0].stacks, 1)
+	owner.take_damage(999)
+	assert_eq(TriggerSource.from_relics(owner, relics).size(), 0, "chủ sở hữu đã chết")

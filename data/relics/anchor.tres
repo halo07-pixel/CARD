@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="RelicData" format=3]
+
+[ext_resource type="Script" path="res://src/data/relic_data.gd" id="1_ijh3n"]
+[ext_resource type="Script" path="res://src/data/trigger_data.gd" id="2_p74t0"]
+[ext_resource type="Script" path="res://src/data/effect_data.gd" id="3_sr1j8"]
+
+[sub_resource type="Resource" id="Resource_ls8gh"]
+script = ExtResource("3_sr1j8")
+type = 1
+amount = 10
+target = 0
+
+[sub_resource type="Resource" id="Resource_tv8tn"]
+script = ExtResource("2_p74t0")
+event = 0
+effects = Array[ExtResource("3_sr1j8")]([SubResource("Resource_ls8gh")])
+
+[resource]
+script = ExtResource("1_ijh3n")
+id = &"anchor"
+display_name = "Anchor"
+description = "Start each combat with 10 Block."
+icon_id = &"anchor"
+triggers = Array[ExtResource("2_p74t0")]([SubResource("Resource_tv8tn")])

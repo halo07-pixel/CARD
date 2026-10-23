@@ -2,6 +2,7 @@ extends SceneTree
 ## Mô phỏng hàng loạt trận bằng bot, in số liệu cân bằng, thoát mã 1 nếu có vi phạm bất biến.
 ## Chạy: godot --headless --path . -s res://tools/simulate_battles.gd -- --battles=300 --seed=1
 ##   --deck=starter|all   (starter: bộ bài khởi đầu của Warrior; all: mỗi thẻ trong data/cards một lần x2)
+##   --relics=none|all    (all: người chơi mang mọi relic trong data/relics)
 
 const SCENARIOS := [
 	["slime", [&"slime"]],
@@ -25,8 +26,11 @@ func _initialize() -> void:
 		deck_ids = _all_cards_deck(cards)
 	var sim := BattleSimulator.new(warrior, cards, EnemyRegistry.load_from_dir("res://data/enemies"),
 			StatusRegistry.load_from_dir("res://data/statuses"), deck_ids)
-	print("Mô phỏng %d trận mỗi dòng | seed %d | bộ bài: %d thẻ (%s)\n" % [
-		battle_count, base_seed, deck_ids.size(), args.get("deck", "starter")])
+	if args.get("relics", "none") == "all":
+		sim.relics = RelicRegistry.load_from_dir("res://data/relics")
+		sim.relic_ids = sim.relics.all_ids()
+	print("Mô phỏng %d trận mỗi dòng | seed %d | bộ bài: %d thẻ (%s) | relic: %d\n" % [
+		battle_count, base_seed, deck_ids.size(), args.get("deck", "starter"), sim.relic_ids.size()])
 	var total_violations := 0
 	for bot_kind in [BattleSimulator.BOT_GREEDY, BattleSimulator.BOT_RANDOM]:
 		for scenario: Array in SCENARIOS:

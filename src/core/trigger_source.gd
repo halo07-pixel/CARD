@@ -19,6 +19,17 @@ static func create(p_key: StringName, p_owner: Combatant, p_triggers: Array[Trig
 	return source
 
 
+## Mỗi relic có trigger là một nguồn (stacks = 1), theo thứ tự nhặt.
+static func from_relics(owner: Combatant, relics: Array[RelicData]) -> Array[TriggerSource]:
+	var sources: Array[TriggerSource] = []
+	if not owner.is_alive():
+		return sources
+	for relic in relics:
+		if not relic.triggers.is_empty():
+			sources.append(TriggerSource.create(StringName("relic:%s" % relic.id), owner, relic.triggers, 1))
+	return sources
+
+
 ## Mọi status ĐANG CÓ trên combatant mà có trigger, theo thứ tự áp dụng lần đầu.
 static func from_statuses(combatant: Combatant) -> Array[TriggerSource]:
 	var sources: Array[TriggerSource] = []

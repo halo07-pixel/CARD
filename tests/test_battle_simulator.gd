@@ -107,3 +107,20 @@ func test_stats_helpers() -> void:
 	assert_almost_eq(stats.avg_turns(), 24.0)
 	assert_almost_eq(stats.avg_hp_lost(), 30.0)
 	assert_true(stats.summary_line().contains("demo"))
+
+
+func test_all_relics_never_break_invariants_and_make_the_player_sturdier() -> void:
+	var relics := RelicRegistry.load_from_dir("res://data/relics")
+	var trio := _ids([&"slime", &"goblin", &"acolyte"])
+	var plain := _sim().run_scenario("trio", trio, BattleSimulator.BOT_GREEDY, 60, 3)
+	var sim := _sim()
+	sim.relics = relics
+	sim.relic_ids = relics.all_ids()
+	var geared := sim.run_scenario("trio", trio, BattleSimulator.BOT_GREEDY, 60, 3)
+	assert_eq(geared.violations, [] as Array[String])
+	assert_true(geared.avg_hp_lost() < plain.avg_hp_lost(),
+			"mang relic phải mất ít máu hơn (%.1f so với %.1f)" % [geared.avg_hp_lost(), plain.avg_hp_lost()])
+	for bot_kind in [BattleSimulator.BOT_GREEDY, BattleSimulator.BOT_RANDOM]:
+		for group: Array in [[&"slime"], [&"goblin", &"slime"], [&"slime", &"goblin", &"acolyte"]]:
+			var stats := sim.run_scenario("relics", _ids(group), bot_kind, 30, 21)
+			assert_eq(stats.violations, [] as Array[String], "%s %s" % [bot_kind, group])

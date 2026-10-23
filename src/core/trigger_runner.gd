@@ -67,9 +67,10 @@ func drain(controller: BattleController) -> void:
 		events_from_results(results, true, controller)
 
 
-## Thứ tự cố định: người chơi trước, rồi quái theo thứ tự trong trận.
+## Thứ tự cố định: người chơi trước (relic rồi status), rồi quái theo thứ tự trong trận.
 func _collect_sources(controller: BattleController) -> Array[TriggerSource]:
 	var sources: Array[TriggerSource] = []
+	sources.append_array(TriggerSource.from_relics(controller.player, controller.relics))
 	sources.append_array(TriggerSource.from_statuses(controller.player))
 	for unit in controller.enemies:
 		sources.append_array(TriggerSource.from_statuses(unit.combatant))

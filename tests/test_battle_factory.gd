@@ -93,3 +93,43 @@ func test_same_seed_gives_same_opening_hand() -> void:
 	for card in second.deck.get_pile(Deck.HAND):
 		b.append(String(card.data.id))
 	assert_eq(a, b)
+
+
+func test_relic_static_bonuses_change_the_battle_config() -> void:
+	var relics := RelicRegistry.load_from_dir("res://data/relics")
+	var player := BattleFactory.create_player(_warrior)
+	var relic_ids: Array[StringName] = [&"energy_crystal", &"wide_lens"]
+	var controller := BattleFactory.create(_warrior, player, _warrior.starting_deck,
+			[&"slime"] as Array[StringName], _cards, _enemies, _statuses, 1, 0, relic_ids, relics)
+	assert_eq(controller.config.max_energy, 4)
+	assert_eq(controller.config.draw_per_turn, 6)
+	controller.start_battle()
+	assert_eq(controller.energy, 4)
+	assert_eq(controller.deck.count(Deck.HAND), 6)
+	assert_eq(controller.relics.size(), 2)
+
+
+func test_relics_do_not_change_the_character_resource_itself() -> void:
+	var relics := RelicRegistry.load_from_dir("res://data/relics")
+	var relic_ids: Array[StringName] = [&"energy_crystal"]
+	BattleFactory.create(_warrior, BattleFactory.create_player(_warrior), _warrior.starting_deck,
+			[&"slime"] as Array[StringName], _cards, _enemies, _statuses, 1, 0, relic_ids, relics)
+	assert_eq(_warrior.max_energy, 3, "bonus chỉ áp vào cấu hình trận, không sửa dữ liệu nhân vật")
+
+
+func test_unknown_relic_or_missing_registry_returns_null() -> void:
+	var relics := RelicRegistry.load_from_dir("res://data/relics")
+	var player := BattleFactory.create_player(_warrior)
+	var enemy_ids: Array[StringName] = [&"slime"]
+	var ghost: Array[StringName] = [&"ghost_relic"]
+	assert_true(BattleFactory.create(_warrior, player, _warrior.starting_deck, enemy_ids, _cards, _enemies,
+			_statuses, 1, 0, ghost, relics) == null, "relic không tồn tại")
+	var real: Array[StringName] = [&"anchor"]
+	assert_true(BattleFactory.create(_warrior, player, _warrior.starting_deck, enemy_ids, _cards, _enemies,
+			_statuses, 1, 0, real, null) == null, "có relic_ids nhưng thiếu registry")
+
+
+func test_no_relics_means_no_change() -> void:
+	var controller := _create([&"slime"] as Array[StringName])
+	assert_eq(controller.relics.size(), 0)
+	assert_eq(controller.config.max_energy, 3)
